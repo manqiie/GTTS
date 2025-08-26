@@ -4,9 +4,7 @@ import {
   Form, 
   Select, 
   Input, 
-  TimePicker, 
   Button, 
-  Space, 
   Upload, 
   Row, 
   Col,
@@ -14,25 +12,18 @@ import {
   Divider,
   List,
   Tag,
-  Typography,
-  Checkbox
+  Typography
 } from 'antd';
-import { PlusOutlined, InboxOutlined, CalendarOutlined } from '@ant-design/icons';
+import { InboxOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import WorkingHoursSelector from './WorkingHoursSelector';
 
 const { TextArea } = Input;
 const { Dragger } = Upload;
 const { Text } = Typography;
 
 /**
- * BulkSelectionModal Component
- * 
- * Modal for editing multiple days at once with:
- * - Entry type selection that applies to all selected days
- * - Primary document day selection for leave types
- * - Auto-reference functionality for subsequent days
- * - Visual linking of connected days
- * - Individual day modification capability
+ * BulkSelectionModal Component using WorkingHoursSelector
  */
 function BulkSelectionModal({ 
   visible, 
@@ -41,14 +32,12 @@ function BulkSelectionModal({
   defaultHours,
   onSave, 
   onCancel,
-  onAddCustomHours 
+  onAddCustomHours,
+  onRemoveCustomHours
 }) {
   const [form] = Form.useForm();
   const [entryType, setEntryType] = useState(null);
   const [primaryDocumentDay, setPrimaryDocumentDay] = useState(null);
-  const [showCustomInput, setShowCustomInput] = useState(false);
-  const [customStartTime, setCustomStartTime] = useState(dayjs('09:00', 'HH:mm'));
-  const [customEndTime, setCustomEndTime] = useState(dayjs('18:00', 'HH:mm'));
   const [selectedHoursId, setSelectedHoursId] = useState(null);
   const [fileList, setFileList] = useState([]);
   const [individualModifications, setIndividualModifications] = useState({});
@@ -76,36 +65,8 @@ function BulkSelectionModal({
       setPrimaryDocumentDay(null);
       setFileList([]);
       setIndividualModifications({});
-      setShowCustomInput(false);
     }
   }, [visible, dates, form]);
-
-  /**
-   * Generate hours options for working hours selection
-   */
-  const getHoursOptions = () => {
-    const predefinedOptions = [
-      { value: '9-18', label: '9:00 AM - 6:00 PM', startTime: '09:00', endTime: '18:00' },
-      { value: '9-17', label: '9:00 AM - 5:00 PM', startTime: '09:00', endTime: '17:00' },
-      { value: '10-18', label: '10:00 AM - 6:00 PM', startTime: '10:00', endTime: '18:00' },
-      { value: '8-17', label: '8:00 AM - 5:00 PM', startTime: '08:00', endTime: '17:00' },
-      { value: '8:30-17:30', label: '8:30 AM - 5:30 PM', startTime: '08:30', endTime: '17:30' },
-    ];
-
-    const customOptions = customHoursList.map(custom => ({
-      value: custom.id,
-      label: `${dayjs(custom.startTime, 'HH:mm').format('h:mm A')} - ${dayjs(custom.endTime, 'HH:mm').format('h:mm A')} (Custom)`,
-      startTime: custom.startTime,
-      endTime: custom.endTime,
-      isCustom: true
-    }));
-
-    return [
-      ...predefinedOptions,
-      ...customOptions,
-      { value: 'add-custom', label: '+ Add Custom Hours' }
-    ];
-  };
 
   /**
    * Handle entry type change
@@ -138,65 +99,10 @@ function BulkSelectionModal({
   };
 
   /**
-   * Handle hours selection
+   * Handle working hours selection change
    */
-  const handleHoursChange = (value) => {
-    if (value === 'add-custom') {
-      setShowCustomInput(true);
-      return;
-    }
-
-    setSelectedHoursId(value);
-    const selectedOption = getHoursOptions().find(opt => opt.value === value);
-    
-    if (selectedOption) {
-      form.setFieldsValue({
-        startTime: dayjs(selectedOption.startTime, 'HH:mm'),
-        endTime: dayjs(selectedOption.endTime, 'HH:mm')
-      });
-    }
-  };
-
-  /**
-   * Save custom working hours
-   */
-  const handleSaveCustomHours = () => {
-    if (!customStartTime || !customEndTime) {
-      message.warning('Please set both start and end times');
-      return;
-    }
-
-    if (customStartTime.isAfter(customEndTime)) {
-      message.warning('End time must be after start time');
-      return;
-    }
-
-    const startTime = customStartTime.format('HH:mm');
-    const endTime = customEndTime.format('HH:mm');
-    
-    const allOptions = getHoursOptions();
-    const isDuplicate = allOptions.some(
-      option => option.startTime === startTime && option.endTime === endTime
-    );
-
-    if (isDuplicate) {
-      message.warning('This time combination already exists');
-      return;
-    }
-
-    const customId = `custom-${Date.now()}`;
-    const newCustomHours = { id: customId, startTime, endTime };
-    
-    onAddCustomHours(newCustomHours);
-    
-    setSelectedHoursId(customId);
-    form.setFieldsValue({
-      startTime: customStartTime,
-      endTime: customEndTime
-    });
-    
-    setShowCustomInput(false);
-    message.success('Custom working hours added successfully');
+  const handleHoursChange = (hoursId) => {
+    setSelectedHoursId(hoursId);
   };
 
   /**
@@ -342,79 +248,18 @@ function BulkSelectionModal({
           />
         </Form.Item>
 
-        {/* Working Hours Selection */}
+        {/* Working Hours Selection using reusable component */}
         {entryType === 'working_hours' && (
-          <>
-            <Form.Item label="Working Hours Preset">
-              <Select
-                value={selectedHoursId}
-                onChange={handleHoursChange}
-                placeholder="Select working hours"
-                options={getHoursOptions()}
-              />
-            </Form.Item>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label="Start Time"
-                  name="startTime"
-                  rules={[{ required: true, message: 'Please select start time' }]}
-                >
-                  <TimePicker style={{ width: '100%' }} format="HH:mm" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  label="End Time"
-                  name="endTime"
-                  rules={[{ required: true, message: 'Please select end time' }]}
-                >
-                  <TimePicker style={{ width: '100%' }} format="HH:mm" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Custom Hours Input */}
-            {showCustomInput && (
-              <>
-                <Divider>Add Custom Working Hours</Divider>
-                <Row gutter={16} align="middle">
-                  <Col span={8}>
-                    <TimePicker
-                      value={customStartTime}
-                      onChange={setCustomStartTime}
-                      format="HH:mm"
-                      placeholder="Start Time"
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <TimePicker
-                      value={customEndTime}
-                      onChange={setCustomEndTime}
-                      format="HH:mm"
-                      placeholder="End Time"
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <Space>
-                      <Button type="primary" size="small" onClick={handleSaveCustomHours}>
-                        Save
-                      </Button>
-                      <Button size="small" onClick={() => setShowCustomInput(false)}>
-                        Cancel
-                      </Button>
-                    </Space>
-                  </Col>
-                </Row>
-                {customStartTime && customEndTime && (
-                  <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
-                    Preview: {customStartTime.format('h:mm A')} - {customEndTime.format('h:mm A')}
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          <Form.Item label="Working Hours Preset">
+            <WorkingHoursSelector
+              customHoursList={customHoursList}
+              selectedHoursId={selectedHoursId}
+              onHoursChange={handleHoursChange}
+              onAddCustomHours={onAddCustomHours}
+              onRemoveCustomHours={onRemoveCustomHours}
+              form={form}
+            />
+          </Form.Item>
         )}
 
         {/* Primary Document Day Selection */}

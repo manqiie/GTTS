@@ -1,0 +1,90 @@
+/* Global application styles */
+.ant-layout {
+  min-height: 100vh;
+}
+
+/* Sidebar customization */
+.ant-layout-sider {
+  background-color: #2C3367 !important;
+}
+
+.ant-menu-dark {
+  background-color: transparent !important;
+}
+
+.ant-menu-dark .ant-menu-item:hover {
+  background-color: #b39f65 !important;
+}
+
+.ant-menu-dark .ant-menu-item-selected {
+  background-color: #b39f65 !important;
+}
+
+/* Calendar specific styles */
+.calendar-grid-cell {
+  transition: all 0.2s ease;
+}
+
+.calendar-grid-cell:hover {
+  background-color: #f0f8ff;
+}
+
+/* Custom form styles */
+.ant-form-item-label > label {
+  font-weight: 500;
+}
+
+/* Bulk selection styles */
+.bulk-selection-tag {
+  margin: 2px 4px 2px 0;
+}
+
+.bulk-primary-tag {
+  border: 2px solid #faad14;
+}
+
+/* File upload styles */
+.ant-upload-drag {
+  border-color: #d9d9d9 !important;
+}
+
+.ant-upload-drag:hover {
+  border-color: #40a9ff !important;
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed !important;
+    z-index: 1000;
+  }
+  
+  .ant-layout-content {
+    margin-left: 0 !important;
+  }
+}

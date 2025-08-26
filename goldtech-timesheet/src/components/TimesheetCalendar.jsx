@@ -11,6 +11,7 @@ const { Text } = Typography;
  * Interactive calendar with features:
  * - Single day clicking
  * - Multi-day selection for bulk operations
+ * - Select All / Deselect All functionality
  * - Visual indicators for different entry types
  * - Weekend/working day distinction
  * - Entry status display
@@ -63,6 +64,17 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
   };
 
   const calendarDays = generateCalendarData();
+  
+  // Get all working days (current month, excluding weekends) for select all functionality
+  const getCurrentMonthWorkingDays = () => {
+    return calendarDays
+      .filter(day => day.isCurrentMonth && !day.isWeekend)
+      .map(day => day.dateStr);
+  };
+
+  const currentMonthWorkingDays = getCurrentMonthWorkingDays();
+  const allWorkingDaysSelected = currentMonthWorkingDays.length > 0 && 
+    currentMonthWorkingDays.every(day => selectedDays.includes(day));
 
   /**
    * Handle day click based on current mode
@@ -94,6 +106,22 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
   const toggleSelectionMode = () => {
     setSelectionMode(!selectionMode);
     setSelectedDays([]);
+  };
+
+  /**
+   * Handle select all / deselect all working days
+   */
+  const handleSelectAll = () => {
+    if (allWorkingDaysSelected) {
+      // Deselect all working days
+      setSelectedDays(prev => prev.filter(day => !currentMonthWorkingDays.includes(day)));
+    } else {
+      // Select all working days
+      setSelectedDays(prev => {
+        const newSelection = [...new Set([...prev, ...currentMonthWorkingDays])];
+        return newSelection.sort();
+      });
+    }
   };
 
   /**
@@ -145,6 +173,17 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
             >
               {selectionMode ? 'Exit Selection' : 'Bulk Select'}
             </Button>
+            
+            {/* Select All button - only show when in selection mode */}
+            {selectionMode && (
+              <Button
+                type="default"
+                onClick={handleSelectAll}
+              >
+                {allWorkingDaysSelected ? 'Deselect All Working Days' : 'Select All Working Days'}
+              </Button>
+            )}
+            
             {selectedDays.length > 0 && (
               <Button type="primary" onClick={applyBulkSelection}>
                 Edit Selected ({selectedDays.length})
@@ -155,7 +194,7 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
         {selectionMode && (
           <Col>
             <Text type="secondary" style={{ fontSize: '12px' }}>
-              Click days to select multiple for bulk editing
+              Click days to select multiple for bulk editing (weekends excluded from "Select All")
             </Text>
           </Col>
         )}
@@ -167,57 +206,77 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
         borderRadius: '6px',
         overflow: 'hidden'
       }}>
-        {/* Week Header */}
-        <Row style={{ backgroundColor: '#fafafa' }}>
+        {/* Week Header - using CSS Grid to match calendar days */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(7, 1fr)',
+          backgroundColor: '#fafafa'
+        }}>
           {weekDays.map(day => (
-            <Col key={day} span={24/7} style={{ textAlign: 'center', padding: '12px 0' }}>
+            <div 
+              key={day} 
+              style={{ 
+                textAlign: 'center', 
+                padding: '12px 0',
+                border: '1px solid #f0f0f0',
+                borderTop: 'none'
+              }}
+            >
               <Text strong style={{ fontSize: '14px' }}>{day}</Text>
-            </Col>
+            </div>
           ))}
-        </Row>
+        </div>
 
         {/* Calendar Days */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
           {calendarDays.map((dayData, index) => {
             const entryDisplay = getEntryDisplay(dayData.entry);
             
+            // Determine base background color
+            let baseBackgroundColor;
+            if (dayData.isSelected) {
+              baseBackgroundColor = '#e6f7ff';
+            } else if (dayData.isCurrentMonth) {
+              if (dayData.isWeekend) {
+                baseBackgroundColor = '#f9f9f9';
+              } else {
+                baseBackgroundColor = 'white';
+              }
+            } else {
+              baseBackgroundColor = '#f5f5f5';
+            }
+            
             return (
               <div
                 key={dayData.dateStr}
                 onClick={() => handleDayClick(dayData)}
+                className={`calendar-day ${dayData.isCurrentMonth ? 'current-month' : ''} ${dayData.isSelected ? 'selected' : ''}`}
                 style={{
                   minHeight: '80px',
                   padding: '8px',
                   border: '1px solid #f0f0f0',
-                  backgroundColor: dayData.isSelected 
-                    ? '#e6f7ff' 
-                    : dayData.isCurrentMonth 
-                      ? dayData.isWeekend ? '#f9f9f9' : 'white'
-                      : '#f5f5f5',
+                  borderTop: 'none',
+                  backgroundColor: baseBackgroundColor,
                   cursor: dayData.isCurrentMonth ? 'pointer' : 'default',
                   opacity: dayData.isCurrentMonth ? 1 : 0.5,
-                  transition: 'all 0.2s ease',
+                  transition: 'background-color 0.15s ease',
                   position: 'relative',
-                  ...(dayData.isToday && { 
-                    boxShadow: 'inset 0 0 0 2px #1890ff',
-                    backgroundColor: '#f0f8ff'
-                  }),
                   ...(dayData.isSelected && {
                     boxShadow: 'inset 0 0 0 2px #52c41a',
                   })
                 }}
                 onMouseEnter={(e) => {
-                  if (dayData.isCurrentMonth) {
-                    e.target.style.backgroundColor = dayData.isSelected 
-                      ? '#e6f7ff' 
-                      : '#f8f9fa';
+                  if (dayData.isCurrentMonth && !dayData.isSelected) {
+                    if (dayData.isWeekend) {
+                      e.currentTarget.style.backgroundColor = '#e8e8e8'; // Darker hover for weekends
+                    } else {
+                      e.currentTarget.style.backgroundColor = '#f8f9fa'; // Light hover for working days
+                    }
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (dayData.isCurrentMonth) {
-                    e.target.style.backgroundColor = dayData.isSelected 
-                      ? '#e6f7ff' 
-                      : dayData.isWeekend ? '#f9f9f9' : 'white';
+                  if (dayData.isCurrentMonth && !dayData.isSelected) {
+                    e.currentTarget.style.backgroundColor = baseBackgroundColor;
                   }
                 }}
               >
@@ -226,7 +285,7 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
                   fontSize: '14px', 
                   fontWeight: dayData.isToday ? 'bold' : 'normal',
                   marginBottom: '4px',
-                  color: dayData.isCurrentMonth ? '#000' : '#999'
+                  color: dayData.isCurrentMonth ? '#262626' : '#999'
                 }}>
                   {dayData.dayNumber}
                 </div>
@@ -259,18 +318,7 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
                   }} />
                 )}
 
-                {/* Working Day Indicator */}
-                {!dayData.isWeekend && dayData.isCurrentMonth && !dayData.entry && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '4px',
-                    left: '4px',
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    backgroundColor: '#faad14'
-                  }} />
-                )}
+              
               </div>
             );
           })}
@@ -304,4 +352,4 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
   );
 }
 
-export default TimesheetCalendar;  
+export default TimesheetCalendar;

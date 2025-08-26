@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Space, Button, message } from 'antd';
 import { SaveOutlined, SendOutlined } from '@ant-design/icons';
 import TimesheetHeader from '../components/TimesheetHeader';
-import QuickSettings from '../components/QuickSettings';
 import TimesheetCalendar from '../components/TimesheetCalendar';
 import DayEntryModal from '../components/DayEntryModal';
 import BulkSelectionModal from '../components/BulkSelectionModal';
@@ -135,18 +134,7 @@ function TimesheetPage() {
         onMonthChange={setSelectedMonth}
       />
 
-      {/* Quick Settings Panel */}
-      <Card style={{ marginBottom: 20 }}>
-        <QuickSettings
-          defaultHours={defaultHours}
-          customHoursList={customHours}
-          onDefaultHoursChange={updateDefaultHours}
-          onAddCustomHours={addCustomHours}
-          onRemoveCustomHours={removeCustomHours}
-          onApplyToAll={applyToAllWorkingDays}
-          onClearAll={handleClearAll}
-        />
-      </Card>
+
 
       {/* Main Calendar Card */}
       <Card>

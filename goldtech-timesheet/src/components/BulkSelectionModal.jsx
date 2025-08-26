@@ -310,10 +310,10 @@ function BulkSelectionModal({
       onOk={handleSubmit}
       onCancel={onCancel}
       width={700}
-      okText="Apply to All Days"
+      okText="Apply to All Selected Days"
     >
       {/* Selected Days Overview */}
-      <div style={{ marginBottom: 20, padding: 12, backgroundColor: '#f6ffed', borderRadius: 6 }}>
+      <div style={{ marginBottom: 20, padding: 12, backgroundColor: '#fffaedff', borderRadius: 6 }}>
         <Text strong>Selected Days: </Text>
         <div style={{ marginTop: 8 }}>
           {dates.map(date => (

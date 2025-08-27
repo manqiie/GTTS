@@ -14,7 +14,7 @@ import { DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 /**
- * WorkingHoursSelector Component - Extracted exactly from DayEntryModal
+ * WorkingHoursSelector Component - Fixed version with proper delete functionality
  */
 function WorkingHoursSelector({
   customHoursList = [],
@@ -58,6 +58,39 @@ function WorkingHoursSelector({
   };
 
   /**
+   * Handle deleting custom hours - Fixed version
+   */
+  const handleDeleteCustomHours = async (customId) => {
+    console.log('Attempting to delete custom hours with ID:', customId); // Debug log
+    
+    if (!onRemoveCustomHours) {
+      console.error('onRemoveCustomHours function not provided');
+      message.error('Delete function not available');
+      return;
+    }
+
+    try {
+      // Call the remove function
+      onRemoveCustomHours(customId);
+      
+      // If the deleted item was selected, clear selection
+      if (selectedHoursId === customId) {
+        onHoursChange && onHoursChange(null);
+        form && form.setFieldsValue({
+          startTime: null,
+          endTime: null
+        });
+      }
+      
+      message.success('Custom hours deleted successfully');
+      console.log('Custom hours deleted successfully'); // Debug log
+    } catch (error) {
+      console.error('Error deleting custom hours:', error);
+      message.error('Failed to delete custom hours');
+    }
+  };
+
+  /**
    * Generate hours options with delete functionality for custom hours
    */
   const getHoursOptions = () => {
@@ -68,17 +101,29 @@ function WorkingHoursSelector({
     const customOptions = customHoursList.map(custom => ({
       value: custom.id,
       label: (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            width: '100%'
+          }}
+          onClick={(e) => {
+            // Prevent the option from being selected when clicking the delete area
+            const target = e.target;
+            if (target.closest('.ant-btn') || target.closest('.ant-popover')) {
+              e.stopPropagation();
+            }
+          }}
+        >
           <span>
             {dayjs(custom.startTime, 'HH:mm').format('h:mm A')} - {dayjs(custom.endTime, 'HH:mm').format('h:mm A')} (Custom)
           </span>
           <Popconfirm
             title="Delete this custom time?"
             description="This action cannot be undone."
-            onConfirm={(e) => {
-              e.stopPropagation();
-              handleDeleteCustomHours(custom.id);
-            }}
+            onConfirm={() => handleDeleteCustomHours(custom.id)} // Simplified - removed event parameter
+            onCancel={() => console.log('Delete cancelled')} // Debug log
             okText="Yes"
             cancelText="No"
             placement="left"
@@ -87,8 +132,12 @@ function WorkingHoursSelector({
               type="text" 
               size="small" 
               icon={<DeleteOutlined />} 
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent dropdown from closing
+                console.log('Delete button clicked for:', custom.id); // Debug log
+              }}
               style={{ color: '#ff4d4f', marginLeft: 8 }}
+              danger
             />
           </Popconfirm>
         </div>
@@ -103,26 +152,6 @@ function WorkingHoursSelector({
       ...customOptions,
       { value: 'add-custom', label: '+ Add Custom Hours' }
     ];
-  };
-
-  /**
-   * Handle deleting custom hours
-   */
-  const handleDeleteCustomHours = (customId) => {
-    if (onRemoveCustomHours) {
-      onRemoveCustomHours(customId);
-      
-      // If the deleted item was selected, clear selection
-      if (selectedHoursId === customId) {
-        onHoursChange && onHoursChange(null);
-        form && form.setFieldsValue({
-          startTime: null,
-          endTime: null
-        });
-      }
-      
-      message.success('Custom hours deleted successfully');
-    }
   };
 
   /**
@@ -254,6 +283,7 @@ function WorkingHoursSelector({
         placeholder="Select working hours"
         options={getHoursOptions()}
         optionRender={(option) => option.data.label}
+        dropdownStyle={{ minWidth: 300 }} // Ensure dropdown is wide enough for delete button
       />
 
       {/* Enhanced Custom Hours Input */}

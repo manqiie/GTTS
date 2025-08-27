@@ -191,13 +191,6 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
             )}
           </Space>
         </Col>
-        {selectionMode && (
-          <Col>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              Click days to select multiple for bulk editing (weekends excluded from "Select All")
-            </Text>
-          </Col>
-        )}
       </Row>
 
       {/* Calendar Grid */}
@@ -262,7 +255,7 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
                   transition: 'background-color 0.15s ease',
                   position: 'relative',
                   ...(dayData.isSelected && {
-                    boxShadow: 'inset 0 0 0 2px #52c41a',
+                    boxShadow: 'inset 0 0 0 2px #4f63d2',
                   })
                 }}
                 onMouseEnter={(e) => {
@@ -313,7 +306,7 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
                     width: '12px',
                     height: '12px',
                     borderRadius: '50%',
-                    backgroundColor: dayData.isSelected ? '#52c41a' : '#d9d9d9',
+                    backgroundColor: dayData.isSelected ? '#4f63d2' : '#d9d9d9',
                     border: '1px solid #fff'
                   }} />
                 )}
@@ -329,22 +322,7 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
       <Row style={{ marginTop: 16 }} gutter={16}>
         <Col>
           <Space size="large">
-            <Space size="small">
-              <div style={{ width: '12px', height: '12px', backgroundColor: '#faad14', borderRadius: '50%' }} />
-              <Text type="secondary" style={{ fontSize: '12px' }}>Working Day (No Entry)</Text>
-            </Space>
-            <Space size="small">
-              <Tag color="blue" style={{ margin: 0, fontSize: '11px' }}>9AM-6PM</Tag>
-              <Text type="secondary" style={{ fontSize: '12px' }}>Working Hours</Text>
-            </Space>
-            <Space size="small">
-              <Tag color="orange" style={{ margin: 0, fontSize: '11px' }}>AL</Tag>
-              <Text type="secondary" style={{ fontSize: '12px' }}>Annual Leave</Text>
-            </Space>
-            <Space size="small">
-              <Tag color="red" style={{ margin: 0, fontSize: '11px' }}>ML</Tag>
-              <Text type="secondary" style={{ fontSize: '12px' }}>Medical Leave</Text>
-            </Space>
+            
           </Space>
         </Col>
       </Row>

@@ -52,6 +52,30 @@
   border-color: #40a9ff !important;
 }
 
+/* Custom button styling */
+.ant-btn-primary {
+  background-color: #4f63d2 !important;
+  border-color: #4f63d2 !important;
+  color: white !important;
+}
+
+.ant-btn-primary:hover {
+  background-color: #b39f65 !important;
+  border-color: #b39f65 !important;
+  color: white !important;
+}
+
+.ant-btn-primary:focus {
+  background-color: #b39f65 !important;
+  border-color: #b39f65 !important;
+  color: white !important;
+}
+
+.ant-btn-primary:active {
+  background-color: #a08c56 !important;
+  border-color: #a08c56 !important;
+}
+
 /* Animation classes */
 .fade-in {
   animation: fadeIn 0.3s ease-in;

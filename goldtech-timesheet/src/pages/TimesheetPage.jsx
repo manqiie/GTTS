@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Space, Button, message } from 'antd';
 import { SaveOutlined, SendOutlined } from '@ant-design/icons';
-import TimesheetHeader from '../components/TimesheetHeader';
-import TimesheetCalendar from '../components/TimesheetCalendar';
-import DayEntryModal from '../components/DayEntryModal';
-import BulkSelectionModal from '../components/BulkSelectionModal';
+import TimesheetHeader from '../components/Timesheet/TimesheetHeader';
+import TimesheetCalendar from '../components/Timesheet/TimesheetCalendar';
+import DayEntryModal from '../components/Timesheet/DayEntryModal';
+import BulkSelectionModal from '../components/Timesheet/BulkSelectionModal';
 import { useTimesheetStore } from '../hooks/useTimesheetStore';
 import dayjs from 'dayjs';
 
@@ -183,6 +183,7 @@ function TimesheetPage() {
         onSave={saveEntry}
         onCancel={() => setModalVisible(false)}
         onAddCustomHours={addCustomHours}
+        onRemoveCustomHours={removeCustomHours}
       />
 
       {/* Bulk Selection Modal */}

@@ -9,6 +9,7 @@ import {
   TeamOutlined,
   ContactsOutlined,
   FileTextOutlined,
+  SettingOutlined, // Added for timesheet management
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -19,7 +20,7 @@ const { Title } = Typography;
  * Provides navigation menu with hierarchical structure
  * Uses Ant Design's Layout.Sider for responsive collapsing
  */
-function Sidebar({ collapsed, setCollapsed }) {
+function Sidebar({ collapsed, setCollapsed, onMenuClick }) {
   // Menu items structure - organized by categories
   const menuItems = [
     {
@@ -59,12 +60,12 @@ function Sidebar({ collapsed, setCollapsed }) {
       type: 'group',
     },
     {
-      key: 'approve',
+      key: 'timesheet-management', 
       icon: <CheckSquareOutlined />,
-      label: 'Approve Timesheets',
+      label: 'Timesheet Management',
     },
     {
-      key: 'staff',
+      key: 'employee-management',
       icon: <TeamOutlined />,
       label: 'Staff Management',
     },
@@ -90,8 +91,10 @@ function Sidebar({ collapsed, setCollapsed }) {
 
   const handleMenuClick = (e) => {
     console.log('Menu clicked:', e.key);
-    // Here you would implement routing logic
-    // For now, we'll just log the selection
+    // Pass the menu click to parent component
+    if (onMenuClick) {
+      onMenuClick(e.key);
+    }
   };
 
   return (

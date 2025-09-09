@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layout, Menu, Typography } from 'antd';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
   UserOutlined,
@@ -9,19 +10,15 @@ import {
   TeamOutlined,
   ContactsOutlined,
   FileTextOutlined,
-  SettingOutlined, // Added for timesheet management
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
 const { Title } = Typography;
 
-/**
- * Sidebar Component
- * Provides navigation menu with hierarchical structure
- * Uses Ant Design's Layout.Sider for responsive collapsing
- */
-function Sidebar({ collapsed, setCollapsed, onMenuClick }) {
-  // Menu items structure - organized by categories
+function Sidebar({ collapsed, setCollapsed }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const menuItems = [
     {
       key: 'home',
@@ -34,7 +31,7 @@ function Sidebar({ collapsed, setCollapsed, onMenuClick }) {
       label: 'My Profile',
     },
     {
-      type: 'divider', // Visual separator
+      type: 'divider',
     },
     {
       key: 'timesheet-group',
@@ -42,7 +39,7 @@ function Sidebar({ collapsed, setCollapsed, onMenuClick }) {
       type: 'group',
     },
     {
-      key: 'my-timesheet',
+      key: 'timesheet',
       icon: <ClockCircleOutlined />,
       label: 'My Timesheet',
     },
@@ -60,9 +57,9 @@ function Sidebar({ collapsed, setCollapsed, onMenuClick }) {
       type: 'group',
     },
     {
-      key: 'timesheet-management', 
+      key: 'approve',
       icon: <CheckSquareOutlined />,
-      label: 'Timesheet Management',
+      label: 'Approve Timesheets',
     },
     {
       key: 'employee-management',
@@ -90,11 +87,35 @@ function Sidebar({ collapsed, setCollapsed, onMenuClick }) {
   ];
 
   const handleMenuClick = (e) => {
-    console.log('Menu clicked:', e.key);
-    // Pass the menu click to parent component
-    if (onMenuClick) {
-      onMenuClick(e.key);
+    const routeMap = {
+      'home': '/home',
+      'profile': '/profile',
+      'timesheet': '/timesheet',
+      'history': '/history',
+      'approve': '/approve',
+      'employee-management': '/employee-management',
+      'clients': '/clients',
+      'invoices': '/invoices',
+    };
+
+    const route = routeMap[e.key];
+    if (route) {
+      navigate(route);
     }
+  };
+
+  // Get current selected key from location
+  const getCurrentKey = () => {
+    const path = location.pathname;
+    if (path.startsWith('/employee-management')) return 'employee-management';
+    if (path === '/timesheet') return 'timesheet';
+    if (path === '/home') return 'home';
+    if (path === '/profile') return 'profile';
+    if (path === '/history') return 'history';
+    if (path === '/approve') return 'approve';
+    if (path === '/clients') return 'clients';
+    if (path === '/invoices') return 'invoices';
+    return 'timesheet'; // default
   };
 
   return (
@@ -137,7 +158,7 @@ function Sidebar({ collapsed, setCollapsed, onMenuClick }) {
       {/* Navigation Menu */}
       <Menu
         theme="dark"
-        defaultSelectedKeys={['my-timesheet']} // Default active menu item
+        selectedKeys={[getCurrentKey()]}
         mode="inline"
         items={menuItems}
         onClick={handleMenuClick}

@@ -1,110 +1,99 @@
+// First install: npm install react-router-dom
+
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout, ConfigProvider } from 'antd';
 import Sidebar from './components/Sidebar';
 import TimesheetPage from './pages/TimesheetPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
+import CreateEmployeePage from './pages/CreateEmployeePage';
+import EditEmployeePage from './pages/EditEmployeePage';
 import './App.css';
 
 const { Content } = Layout;
 
-/**
- * Main App Component
- * This is the root component that provides the overall layout structure
- * using Ant Design's Layout system with simple page routing
- */
 function App() {
   const [collapsed, setCollapsed] = useState(false);
-  const [currentPage, setCurrentPage] = useState('my-timesheet'); // Default page
-
-  /**
-   * Handle menu navigation
-   */
-  const handleMenuClick = (menuKey) => {
-    setCurrentPage(menuKey);
-  };
-
-  /**
-   * Render the current page based on selected menu item
-   */
-  const renderCurrentPage = () => {
-    switch (currentPage) {
-      case 'my-timesheet':
-        return <TimesheetPage />;
-      case 'employee-management':
-        return <EmployeeManagementPage />;
-      case 'home':
-        return (
-          <div style={{ padding: '50px', textAlign: 'center' }}>
-            <h1>Welcome to GOLDTECH RESOURCES</h1>
-            <p>Select a menu item to get started.</p>
-          </div>
-        );
-      case 'profile':
-        return (
-          <div style={{ padding: '50px', textAlign: 'center' }}>
-            <h1>My Profile</h1>
-            <p>Profile page coming soon...</p>
-          </div>
-        );
-      case 'history':
-        return (
-          <div style={{ padding: '50px', textAlign: 'center' }}>
-            <h1>Timesheet History</h1>
-            <p>History page coming soon...</p>
-          </div>
-        );
-      case 'approve':
-        return (
-          <div style={{ padding: '50px', textAlign: 'center' }}>
-            <h1>Approve Timesheets</h1>
-            <p>Approval page coming soon...</p>
-          </div>
-        );
-      case 'clients':
-        return (
-          <div style={{ padding: '50px', textAlign: 'center' }}>
-            <h1>Client Management</h1>
-            <p>Client management page coming soon...</p>
-          </div>
-        );
-      case 'invoices':
-        return (
-          <div style={{ padding: '50px', textAlign: 'center' }}>
-            <h1>Invoice Generator</h1>
-            <p>Invoice generator coming soon...</p>
-          </div>
-        );
-      default:
-        return <TimesheetPage />;
-    }
-  };
 
   return (
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: '#b39f65', // Golden color from your original design
+          colorPrimary: '#b39f65',
         },
       }}
     >
-      <Layout style={{ minHeight: '100vh' }}>
-        {/* Sidebar Component - contains navigation menu */}
-        <Sidebar 
-          collapsed={collapsed} 
-          setCollapsed={setCollapsed} 
-          onMenuClick={handleMenuClick}
-        />
-                
-        {/* Main Content Area */}
-        <Layout style={{ marginLeft: collapsed ? 80 : 250, transition: 'margin-left 0.2s' }}>
-          <Content style={{ padding: '20px', backgroundColor: '#f5f5f5' }}>
-            {/* Render current page based on menu selection */}
-            {renderCurrentPage()}
-          </Content>
+      <Router>
+        <Layout style={{ minHeight: '100vh' }}>
+          <Sidebar 
+            collapsed={collapsed} 
+            setCollapsed={setCollapsed}
+          />
+                  
+          <Layout style={{ marginLeft: collapsed ? 80 : 250, transition: 'margin-left 0.2s' }}>
+            <Content style={{ padding: '20px', backgroundColor: '#f5f5f5' }}>
+              <Routes>
+                <Route path="/" element={<Navigate to="/timesheet" replace />} />
+                <Route path="/home" element={<HomePlaceholder />} />
+                <Route path="/profile" element={<ProfilePlaceholder />} />
+                <Route path="/timesheet" element={<TimesheetPage />} />
+                <Route path="/history" element={<HistoryPlaceholder />} />
+                <Route path="/approve" element={<ApprovePlaceholder />} />
+                <Route path="/employee-management" element={<EmployeeManagementPage />} />
+                <Route path="/employee-management/create" element={<CreateEmployeePage />} />
+                <Route path="/employee-management/edit/:id" element={<EditEmployeePage />} />
+                <Route path="/clients" element={<ClientsPlaceholder />} />
+                <Route path="/invoices" element={<InvoicesPlaceholder />} />
+              </Routes>
+            </Content>
+          </Layout>
         </Layout>
-      </Layout>
+      </Router>
     </ConfigProvider>
   );
 }
+
+// Placeholder components for other pages
+const HomePlaceholder = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Welcome to GOLDTECH RESOURCES</h1>
+    <p>Dashboard coming soon...</p>
+  </div>
+);
+
+const ProfilePlaceholder = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>My Profile</h1>
+    <p>Profile page coming soon...</p>
+  </div>
+);
+
+const HistoryPlaceholder = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Timesheet History</h1>
+    <p>History page coming soon...</p>
+  </div>
+);
+
+const ApprovePlaceholder = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Approve Timesheets</h1>
+    <p>Approval page coming soon...</p>
+  </div>
+);
+
+const ClientsPlaceholder = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Client Management</h1>
+    <p>Client management page coming soon...</p>
+  </div>
+);
+
+const InvoicesPlaceholder = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Invoice Generator</h1>
+    <p>Invoice generator coming soon...</p>
+  </div>
+);
 
 export default App;

@@ -1,5 +1,4 @@
-// First install: npm install react-router-dom
-
+// Updated App.jsx - Add the new import and route
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout, ConfigProvider } from 'antd';
@@ -8,6 +7,7 @@ import TimesheetPage from './pages/TimesheetPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
 import CreateEmployeePage from './pages/CreateEmployeePage';
 import EditEmployeePage from './pages/EditEmployeePage';
+import TimesheetManagementPage from './pages/TimesheetManagementPage'; // Add this import
 import './App.css';
 
 const { Content } = Layout;
@@ -39,7 +39,7 @@ function App() {
                 <Route path="/timesheet" element={<TimesheetPage />} />
                 <Route path="/history" element={<HistoryPlaceholder />} />
                 <Route path="/approve" element={<ApprovePlaceholder />} />
-                <Route path="/timesheet-management" element={<TimesheetPlaceholder />} />
+                <Route path="/timesheet-management" element={<TimesheetManagementPage />} /> {/* Update this route */}
                 <Route path="/employee-management" element={<EmployeeManagementPage />} />
                 <Route path="/employee-management/create" element={<CreateEmployeePage />} />
                 <Route path="/employee-management/edit/:id" element={<EditEmployeePage />} />
@@ -54,7 +54,7 @@ function App() {
   );
 }
 
-// Placeholder components for other pages
+// Placeholder components for other pages (keep existing ones)
 const HomePlaceholder = () => (
   <div style={{ padding: '50px', textAlign: 'center' }}>
     <h1>Welcome to GOLDTECH RESOURCES</h1>
@@ -80,13 +80,6 @@ const ApprovePlaceholder = () => (
   <div style={{ padding: '50px', textAlign: 'center' }}>
     <h1>Approve Timesheets</h1>
     <p>Approval page coming soon...</p>
-  </div>
-);
-
-const TimesheetPlaceholder = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>Timesheets management</h1>
-    <p>Timesheet Management page coming soon...</p>
   </div>
 );
 

@@ -62,6 +62,11 @@ function Sidebar({ collapsed, setCollapsed }) {
       label: 'Approve Timesheets',
     },
     {
+      key: 'timesheet-management',
+      icon: <CheckSquareOutlined />,
+      label: 'Timesheet Management',
+    },
+    {
       key: 'employee-management',
       icon: <TeamOutlined />,
       label: 'Staff Management',
@@ -93,6 +98,7 @@ function Sidebar({ collapsed, setCollapsed }) {
       'timesheet': '/timesheet',
       'history': '/history',
       'approve': '/approve',
+      'timesheet-management': '/timesheet-management',
       'employee-management': '/employee-management',
       'clients': '/clients',
       'invoices': '/invoices',
@@ -113,6 +119,7 @@ function Sidebar({ collapsed, setCollapsed }) {
     if (path === '/profile') return 'profile';
     if (path === '/history') return 'history';
     if (path === '/approve') return 'approve';
+    if (path === '/timesheet-management') return 'timesheet-management';
     if (path === '/clients') return 'clients';
     if (path === '/invoices') return 'invoices';
     return 'timesheet'; // default

@@ -39,6 +39,7 @@ function App() {
                 <Route path="/timesheet" element={<TimesheetPage />} />
                 <Route path="/history" element={<HistoryPlaceholder />} />
                 <Route path="/approve" element={<ApprovePlaceholder />} />
+                <Route path="/timesheet-management" element={<TimesheetPlaceholder />} />
                 <Route path="/employee-management" element={<EmployeeManagementPage />} />
                 <Route path="/employee-management/create" element={<CreateEmployeePage />} />
                 <Route path="/employee-management/edit/:id" element={<EditEmployeePage />} />
@@ -79,6 +80,13 @@ const ApprovePlaceholder = () => (
   <div style={{ padding: '50px', textAlign: 'center' }}>
     <h1>Approve Timesheets</h1>
     <p>Approval page coming soon...</p>
+  </div>
+);
+
+const TimesheetPlaceholder = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Timesheets management</h1>
+    <p>Timesheet Management page coming soon...</p>
   </div>
 );
 

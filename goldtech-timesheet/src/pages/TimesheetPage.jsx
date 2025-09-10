@@ -195,6 +195,7 @@ function TimesheetPage() {
         onSave={saveBulkEntries}
         onCancel={() => setBulkModalVisible(false)}
         onAddCustomHours={addCustomHours}
+        onRemoveCustomHours={removeCustomHours}
       />
     </div>
   );

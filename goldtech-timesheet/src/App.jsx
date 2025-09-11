@@ -1,22 +1,25 @@
-// Updated App.jsx - Add the new imports and routes
+// src/App.jsx - Complete version with Authentication System
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout, ConfigProvider } from 'antd';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 import Sidebar from './components/Sidebar';
+import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
+import ProfilePage from './pages/ProfilePage';
 import TimesheetPage from './pages/TimesheetPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
 import CreateEmployeePage from './pages/CreateEmployeePage';
 import EditEmployeePage from './pages/EditEmployeePage';
 import TimesheetManagementPage from './pages/TimesheetManagementPage';
 import ApproveTimesheetPage from './pages/ApproveTimesheetPage';
-import TimesheetReviewPage from './pages/TimesheetReviewPage'; // Add this import
+import TimesheetReviewPage from './pages/TimesheetReviewPage';
 import './App.css';
 
 const { Content } = Layout;
 
 function App() {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
     <ConfigProvider
       theme={{
@@ -25,71 +28,153 @@ function App() {
         },
       }}
     >
-      <Router>
-        <Layout style={{ minHeight: '100vh' }}>
-          <Sidebar 
-            collapsed={collapsed} 
-            setCollapsed={setCollapsed}
-          />
-                  
-          <Layout style={{ marginLeft: collapsed ? 80 : 250, transition: 'margin-left 0.2s' }}>
-            <Content style={{ padding: '20px', backgroundColor: '#f5f5f5' }}>
-              <Routes>
-                <Route path="/" element={<Navigate to="/timesheet" replace />} />
-                <Route path="/home" element={<HomePlaceholder />} />
-                <Route path="/profile" element={<ProfilePlaceholder />} />
-                <Route path="/timesheet" element={<TimesheetPage />} />
-                <Route path="/history" element={<HistoryPlaceholder />} />
-                <Route path="/approve" element={<ApproveTimesheetPage />} />
-                <Route path="/approve/review/:timesheetId" element={<TimesheetReviewPage />} /> {/* Add this route */}
-                <Route path="/timesheet-management" element={<TimesheetManagementPage />} />
-                <Route path="/employee-management" element={<EmployeeManagementPage />} />
-                <Route path="/employee-management/create" element={<CreateEmployeePage />} />
-                <Route path="/employee-management/edit/:id" element={<EditEmployeePage />} />
-                <Route path="/clients" element={<ClientsPlaceholder />} />
-                <Route path="/invoices" element={<InvoicesPlaceholder />} />
-              </Routes>
-            </Content>
-          </Layout>
-        </Layout>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
     </ConfigProvider>
   );
 }
 
-// Placeholder components for other pages (keep existing ones)
-const HomePlaceholder = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>Welcome to GOLDTECH RESOURCES</h1>
-    <p>Dashboard coming soon...</p>
-  </div>
-);
+function AppContent() {
+  const [collapsed, setCollapsed] = useState(false);
 
-const ProfilePlaceholder = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>My Profile</h1>
-    <p>Profile page coming soon...</p>
-  </div>
-);
+  return (
+    <Routes>
+      {/* Public Routes - Login Page */}
+      <Route path="/login" element={<LoginPage />} />
+      
+      {/* Protected Routes - All other pages require authentication */}
+      <Route path="/*" element={
+        <ProtectedRoute>
+          <Layout style={{ minHeight: '100vh' }}>
+            <Sidebar 
+              collapsed={collapsed} 
+              setCollapsed={setCollapsed}
+            />
+            
+            <Layout style={{ marginLeft: collapsed ? 80 : 250, transition: 'margin-left 0.2s' }}>
+              <Content style={{ padding: '20px', backgroundColor: '#f5f5f5' }}>
+                <Routes>
+                  {/* Default redirect to home */}
+                  <Route path="/" element={<Navigate to="/home" replace />} />
+                  
+                  {/* Basic user pages */}
+                  <Route path="/home" element={<HomePage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/timesheet" element={<TimesheetPage />} />
+                  <Route path="/history" element={<HistoryPlaceholder />} />
+                  
+                  {/* Manager/Admin Routes - Timesheet Approval */}
+                  <Route path="/approve" element={
+                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                      <ApproveTimesheetPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/approve/review/:timesheetId" element={
+                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                      <TimesheetReviewPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin Routes - Timesheet Management */}
+                  <Route path="/timesheet-management" element={
+                    <ProtectedRoute requiredPermissions={['timesheet.manage']}>
+                      <TimesheetManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin Routes - Employee Management */}
+                  <Route path="/employee-management" element={
+                    <ProtectedRoute requiredPermissions={['employee.manage']}>
+                      <EmployeeManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/employee-management/create" element={
+                    <ProtectedRoute requiredPermissions={['employee.create']}>
+                      <CreateEmployeePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/employee-management/edit/:id" element={
+                    <ProtectedRoute requiredPermissions={['employee.edit']}>
+                      <EditEmployeePage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin Routes - System Administration */}
+                  <Route path="/clients" element={
+                    <ProtectedRoute requiredPermissions={['system.admin']}>
+                      <ClientsPlaceholder />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/invoices" element={
+                    <ProtectedRoute requiredPermissions={['system.admin']}>
+                      <InvoicesPlaceholder />
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+              </Content>
+            </Layout>
+          </Layout>
+        </ProtectedRoute>
+      } />
+    </Routes>
+  );
+}
 
+// Placeholder components for pages not yet implemented
 const HistoryPlaceholder = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
+  <div style={{ 
+    padding: '50px', 
+    textAlign: 'center',
+    background: '#fff',
+    borderRadius: '8px',
+    margin: '20px 0'
+  }}>
     <h1>Timesheet History</h1>
-    <p>History page coming soon...</p>
+    <p style={{ color: '#666', marginBottom: '24px' }}>
+      View your previous timesheet submissions and their approval status.
+    </p>
+    <p style={{ color: '#999', fontSize: '14px' }}>
+      This feature is coming soon...
+    </p>
   </div>
 );
 
 const ClientsPlaceholder = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
+  <div style={{ 
+    padding: '50px', 
+    textAlign: 'center',
+    background: '#fff',
+    borderRadius: '8px',
+    margin: '20px 0'
+  }}>
     <h1>Client Management</h1>
-    <p>Client management page coming soon...</p>
+    <p style={{ color: '#666', marginBottom: '24px' }}>
+      Manage client information, projects, and billing details.
+    </p>
+    <p style={{ color: '#999', fontSize: '14px' }}>
+      This feature is coming soon...
+    </p>
   </div>
 );
 
 const InvoicesPlaceholder = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
+  <div style={{ 
+    padding: '50px', 
+    textAlign: 'center',
+    background: '#fff',
+    borderRadius: '8px',
+    margin: '20px 0'
+  }}>
     <h1>Invoice Generator</h1>
-    <p>Invoice generator coming soon...</p>
+    <p style={{ color: '#666', marginBottom: '24px' }}>
+      Generate invoices based on approved timesheets and project billing rates.
+    </p>
+    <p style={{ color: '#999', fontSize: '14px' }}>
+      This feature is coming soon...
+    </p>
   </div>
 );
 

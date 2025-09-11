@@ -1,5 +1,6 @@
-import React from 'react';
-import { Layout, Menu, Typography } from 'antd';
+// src/components/Sidebar.jsx - Fixed height and role-based menu
+import React, { useState } from 'react';
+import { Layout, Menu, Typography, Avatar, Space, Button, Modal, message } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -10,86 +11,119 @@ import {
   TeamOutlined,
   ContactsOutlined,
   FileTextOutlined,
+  LogoutOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Sider } = Layout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 function Sidebar({ collapsed, setCollapsed }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
-  const menuItems = [
-    {
-      key: 'home',
-      icon: <HomeOutlined />,
-      label: 'Home',
-    },
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: 'My Profile',
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'timesheet-group',
-      label: 'Timesheet',
-      type: 'group',
-    },
-    {
-      key: 'timesheet',
-      icon: <ClockCircleOutlined />,
-      label: 'My Timesheet',
-    },
-    {
-      key: 'history',
-      icon: <HistoryOutlined />,
-      label: 'History',
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'management-group',
-      label: 'Management',
-      type: 'group',
-    },
-    {
-      key: 'approve',
-      icon: <CheckSquareOutlined />,
-      label: 'Approve Timesheets',
-    },
-    {
-      key: 'timesheet-management',
-      icon: <CheckSquareOutlined />,
-      label: 'Timesheet Management',
-    },
-    {
-      key: 'employee-management',
-      icon: <TeamOutlined />,
-      label: 'Staff Management',
-    },
-    {
-      key: 'clients',
-      icon: <ContactsOutlined />,
-      label: 'Client Management',
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'reports-group',
-      label: 'Reports',
-      type: 'group',
-    },
-    {
-      key: 'invoices',
-      icon: <FileTextOutlined />,
-      label: 'Invoice Generator',
-    },
-  ];
+  // Filter menu items based on user permissions
+  const getMenuItems = () => {
+    const baseItems = [
+      {
+        key: 'home',
+        icon: <HomeOutlined />,
+        label: 'Home',
+      },
+      {
+        key: 'profile',
+        icon: <UserOutlined />,
+        label: 'My Profile',
+      }
+    ];
+
+    // Only show timesheet items for employees
+    if (user?.role === 'employee') {
+      baseItems.push(
+        {
+          type: 'divider',
+        },
+        {
+          key: 'timesheet-group',
+          label: 'Timesheet',
+          type: 'group',
+        },
+        {
+          key: 'timesheet',
+          icon: <ClockCircleOutlined />,
+          label: 'My Timesheet',
+        },
+        {
+          key: 'history',
+          icon: <HistoryOutlined />,
+          label: 'History',
+        }
+      );
+    }
+
+    // Add management items based on user role/permissions
+    if (user?.permissions?.includes('timesheet.approve') || user?.role === 'manager' || user?.role === 'admin') {
+      baseItems.push(
+        {
+          type: 'divider',
+        },
+        {
+          key: 'management-group',
+          label: 'Management',
+          type: 'group',
+        },
+        {
+          key: 'approve',
+          icon: <CheckSquareOutlined />,
+          label: 'Approve Timesheets',
+        }
+      );
+    }
+
+    if (user?.permissions?.includes('timesheet.manage') || user?.role === 'admin') {
+      baseItems.push({
+        key: 'timesheet-management',
+        icon: <CheckSquareOutlined />,
+        label: 'Timesheet Management',
+      });
+    }
+
+    if (user?.permissions?.includes('employee.manage') || user?.role === 'admin') {
+      baseItems.push({
+        key: 'employee-management',
+        icon: <TeamOutlined />,
+        label: 'Staff Management',
+      });
+    }
+
+    if (user?.permissions?.includes('system.admin') || user?.role === 'admin') {
+      baseItems.push(
+        {
+          key: 'clients',
+          icon: <ContactsOutlined />,
+          label: 'Client Management',
+        },
+        {
+          type: 'divider',
+        },
+        {
+          key: 'reports-group',
+          label: 'Reports',
+          type: 'group',
+        },
+        {
+          key: 'invoices',
+          icon: <FileTextOutlined />,
+          label: 'Invoice Generator',
+        }
+      );
+    }
+
+    return baseItems;
+  };
 
   const handleMenuClick = (e) => {
     const routeMap = {
@@ -114,66 +148,196 @@ function Sidebar({ collapsed, setCollapsed }) {
   const getCurrentKey = () => {
     const path = location.pathname;
     if (path.startsWith('/employee-management')) return 'employee-management';
+    if (path.startsWith('/approve')) return 'approve';
     if (path === '/timesheet') return 'timesheet';
     if (path === '/home') return 'home';
     if (path === '/profile') return 'profile';
     if (path === '/history') return 'history';
-    if (path === '/approve') return 'approve';
     if (path === '/timesheet-management') return 'timesheet-management';
     if (path === '/clients') return 'clients';
     if (path === '/invoices') return 'invoices';
-    return 'timesheet'; // default
+    return 'home'; // default to home
+  };
+
+  const handleLogoutClick = () => {
+    setLogoutModalVisible(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    logout();
+    setLogoutModalVisible(false);
+    message.success('Logged out successfully');
+    navigate('/login');
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutModalVisible(false);
+  };
+
+  const getUserDisplayName = () => {
+    if (!user) return 'User';
+    return user.name.split(' ')[0]; // First name only
+  };
+
+  const getUserRole = () => {
+    if (!user) return '';
+    const roleMap = {
+      employee: 'Employee',
+      manager: 'Manager',
+      admin: 'Administrator'
+    };
+    return roleMap[user.role] || user.role;
   };
 
   return (
-    <Sider
-      collapsible
-      collapsed={collapsed}
-      onCollapse={setCollapsed}
-      width={250}
-      style={{
-        overflow: 'auto',
-        height: '100vh',
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        backgroundColor: '#2C3367',
-      }}
-    >
-      {/* Company Logo/Brand */}
-      <div style={{ 
-        padding: collapsed ? '20px 10px' : '20px', 
-        textAlign: 'center',
-        borderBottom: '1px solid #34495e',
-        marginBottom: '20px'
-      }}>
-        <Title 
-          level={4} 
-          style={{ 
-            color: '#b39f65', 
-            margin: 0,
-            fontSize: collapsed ? '12px' : '14px',
-            lineHeight: '1.2',
-            letterSpacing: '1px'
-          }}
-        >
-          {collapsed ? 'GT' : 'GOLDTECH\nRESOURCES'}
-        </Title>
-      </div>
-
-      {/* Navigation Menu */}
-      <Menu
-        theme="dark"
-        selectedKeys={[getCurrentKey()]}
-        mode="inline"
-        items={menuItems}
-        onClick={handleMenuClick}
+    <>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        width={250}
         style={{
-          backgroundColor: 'transparent',
+          overflow: 'auto',
+          height: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          backgroundColor: '#2C3367',
         }}
-      />
-    </Sider>
+      >
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          height: '100%' 
+        }}>
+          {/* Company Logo/Brand */}
+          <div style={{ 
+            padding: collapsed ? '20px 10px' : '20px', 
+            textAlign: 'center',
+            borderBottom: '1px solid #34495e',
+            marginBottom: '20px'
+          }}>
+            <Title 
+              level={4} 
+              style={{ 
+                color: '#b39f65', 
+                margin: 0,
+                fontSize: collapsed ? '12px' : '14px',
+                lineHeight: '1.2',
+                letterSpacing: '1px'
+              }}
+            >
+              {collapsed ? 'GT' : 'GOLDTECH\nRESOURCES'}
+            </Title>
+          </div>
+
+          {/* User Info Section */}
+          {!collapsed && user && (
+            <div style={{
+              padding: '0 20px 20px 20px',
+              borderBottom: '1px solid #34495e',
+              marginBottom: '20px'
+            }}>
+              <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar 
+                    size={32} 
+                    icon={<UserOutlined />} 
+                    style={{ 
+                      backgroundColor: '#b39f65',
+                      marginRight: 8
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ 
+                      color: '#fff', 
+                      fontSize: '13px', 
+                      fontWeight: 500,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {getUserDisplayName()}
+                    </div>
+                    <div style={{ 
+                      color: '#b39f65', 
+                      fontSize: '11px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {getUserRole()}
+                    </div>
+                  </div>
+                </div>
+              </Space>
+            </div>
+          )}
+
+          {/* Navigation Menu - Takes remaining space */}
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <Menu
+              theme="dark"
+              selectedKeys={[getCurrentKey()]}
+              mode="inline"
+              items={getMenuItems()}
+              onClick={handleMenuClick}
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none'
+              }}
+            />
+          </div>
+
+          {/* Logout Section - Fixed at bottom */}
+          <div style={{
+            padding: collapsed ? '10px' : '20px',
+            borderTop: '1px solid #34495e',
+            marginTop: 'auto'
+          }}>
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={handleLogoutClick}
+              style={{
+                color: '#fff',
+                width: '100%',
+                textAlign: 'left',
+                height: collapsed ? '40px' : 'auto',
+                padding: collapsed ? '0' : '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-start'
+              }}
+            >
+              {!collapsed && 'Logout'}
+            </Button>
+          </div>
+        </div>
+      </Sider>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+            Confirm Logout
+          </Space>
+        }
+        open={logoutModalVisible}
+        onOk={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+        okText="Yes, Logout"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
+      >
+        <p>Are you sure you want to logout from the system?</p>
+        <p style={{ color: '#666', fontSize: '12px', marginBottom: 0 }}>
+          You will need to login again to access your timesheet.
+        </p>
+      </Modal>
+    </>
   );
 }
 

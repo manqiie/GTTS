@@ -1,4 +1,4 @@
-// Updated App.jsx - Add the new import and route
+// Updated App.jsx - Add the new imports and routes
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout, ConfigProvider } from 'antd';
@@ -7,7 +7,9 @@ import TimesheetPage from './pages/TimesheetPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
 import CreateEmployeePage from './pages/CreateEmployeePage';
 import EditEmployeePage from './pages/EditEmployeePage';
-import TimesheetManagementPage from './pages/TimesheetManagementPage'; // Add this import
+import TimesheetManagementPage from './pages/TimesheetManagementPage';
+import ApproveTimesheetPage from './pages/ApproveTimesheetPage';
+import TimesheetReviewPage from './pages/TimesheetReviewPage'; // Add this import
 import './App.css';
 
 const { Content } = Layout;
@@ -38,8 +40,9 @@ function App() {
                 <Route path="/profile" element={<ProfilePlaceholder />} />
                 <Route path="/timesheet" element={<TimesheetPage />} />
                 <Route path="/history" element={<HistoryPlaceholder />} />
-                <Route path="/approve" element={<ApprovePlaceholder />} />
-                <Route path="/timesheet-management" element={<TimesheetManagementPage />} /> {/* Update this route */}
+                <Route path="/approve" element={<ApproveTimesheetPage />} />
+                <Route path="/approve/review/:timesheetId" element={<TimesheetReviewPage />} /> {/* Add this route */}
+                <Route path="/timesheet-management" element={<TimesheetManagementPage />} />
                 <Route path="/employee-management" element={<EmployeeManagementPage />} />
                 <Route path="/employee-management/create" element={<CreateEmployeePage />} />
                 <Route path="/employee-management/edit/:id" element={<EditEmployeePage />} />
@@ -73,13 +76,6 @@ const HistoryPlaceholder = () => (
   <div style={{ padding: '50px', textAlign: 'center' }}>
     <h1>Timesheet History</h1>
     <p>History page coming soon...</p>
-  </div>
-);
-
-const ApprovePlaceholder = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>Approve Timesheets</h1>
-    <p>Approval page coming soon...</p>
   </div>
 );
 

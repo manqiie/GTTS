@@ -279,7 +279,7 @@ function TimesheetDetailModal({
                 icon={<FileTextOutlined />}
                 onClick={() => onDownloadPDF(timesheet, 'view')}
               >
-                View PDF
+                View Detail
               </Button>
               <Button 
                 type="primary"

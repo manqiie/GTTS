@@ -430,10 +430,6 @@ function BulkSelectionModal({
           </>
         )}
 
-        <Form.Item label="Notes (Optional)" name="notes">
-          <TextArea rows={3} placeholder="Add notes that will apply to all selected days..." />
-        </Form.Item>
-
         {/* Individual Day Configuration */}
         <Divider>
           Individual Day Configuration

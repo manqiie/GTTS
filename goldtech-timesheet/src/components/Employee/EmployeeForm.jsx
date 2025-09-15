@@ -1,6 +1,7 @@
-// EmployeeForm.jsx 
+// EmployeeForm.jsx - Updated with textboxes for work info and manager search
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Select, DatePicker, Row, Col, Card, Typography } from 'antd';
+import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { TextArea } = Input;
@@ -15,6 +16,8 @@ function EmployeeForm({
 }) {
   const [availableManagers, setAvailableManagers] = useState([]);
   const [availableRoles, setAvailableRoles] = useState([]);
+  const [managerOptions, setManagerOptions] = useState([]);
+  const [managerSearchValue, setManagerSearchValue] = useState('');
 
   // Load roles and managers on component mount
   useEffect(() => {
@@ -22,9 +25,23 @@ function EmployeeForm({
     loadManagers();
   }, []);
 
+  // Update manager options when search value changes
+  useEffect(() => {
+    filterManagerOptions(managerSearchValue);
+  }, [managerSearchValue, availableManagers]);
+
+  // Set initial manager search value when editing
+  useEffect(() => {
+    if (initialValues && initialValues.manager_id) {
+      const manager = availableManagers.find(m => m.id === initialValues.manager_id);
+      if (manager) {
+        setManagerSearchValue(`${manager.full_name} (${manager.employee_id || 'No ID'})`);
+      }
+    }
+  }, [initialValues, availableManagers]);
+
   const loadRoles = () => {
     // In real implementation, this would be an API call
-    // For now, using static data based on your database structure
     const roles = [
       { id: 1, name: 'admin', description: 'Administrator' },
       { id: 2, name: 'manager', description: 'Manager' },
@@ -35,50 +52,78 @@ function EmployeeForm({
 
   const loadManagers = () => {
     // In real implementation, this would fetch users with manager role
-    // For now, using mock data
     const managers = [
-      { id: 1, full_name: 'Alice Johnson', employee_id: 'MGR001' },
-      { id: 2, full_name: 'Bob Chen', employee_id: 'MGR002' },
-      { id: 3, full_name: 'Carol Smith', employee_id: 'MGR003' },
-      { id: 4, full_name: 'David Lee', employee_id: 'MGR004' },
-      { id: 5, full_name: 'Emily Wong', employee_id: 'MGR005' }
+      { id: 'USR002', full_name: 'Alice Johnson', employee_id: 'MGR001' },
+      { id: 'USR005', full_name: 'Carol Smith', employee_id: 'MGR002' },
+      { id: 'USR006', full_name: 'Admin User', employee_id: null },
+      { id: 'USR008', full_name: 'Bob Chen', employee_id: 'MGR003' },
+      { id: 'USR009', full_name: 'David Lee Johnson', employee_id: 'MGR004' },
+      { id: 'USR010', full_name: 'Emily Wong', employee_id: 'MGR005' },
+      { id: 'USR011', full_name: 'Johnson Martinez', employee_id: 'MGR006' }
     ];
     setAvailableManagers(managers);
   };
 
-  // Sample data for dropdowns
-  const positionOptions = [
-    { label: 'Senior Developer', value: 'Senior Developer' },
-    { label: 'Junior Developer', value: 'Junior Developer' },
-    { label: 'Project Manager', value: 'Project Manager' },
-    { label: 'QA Engineer', value: 'QA Engineer' },
-    { label: 'Business Analyst', value: 'Business Analyst' },
-    { label: 'UI/UX Designer', value: 'UI/UX Designer' },
-    { label: 'DevOps Engineer', value: 'DevOps Engineer' },
-    { label: 'Team Lead', value: 'Team Lead' },
-    { label: 'System Administrator', value: 'System Administrator' }
-  ];
+  const filterManagerOptions = (searchText) => {
+    if (!searchText) {
+      setManagerOptions([]);
+      return;
+    }
 
-  const projectSiteOptions = [
-    { label: 'Marina Bay Project', value: 'Marina Bay Project' },
-    { label: 'Orchard Road Development', value: 'Orchard Road Development' },
-    { label: 'Sentosa Resort', value: 'Sentosa Resort' },
-    { label: 'Changi Airport Expansion', value: 'Changi Airport Expansion' },
-    { label: 'CBD Tower Complex', value: 'CBD Tower Complex' },
-    { label: 'Punggol Smart City', value: 'Punggol Smart City' }
-  ];
+    const filtered = availableManagers.filter(manager => {
+      const fullName = manager.full_name.toLowerCase();
+      const employeeId = (manager.employee_id || '').toLowerCase();
+      const search = searchText.toLowerCase();
+      
+      return fullName.includes(search) || employeeId.includes(search);
+    });
 
-  const departmentOptions = [
-    { label: 'Development', value: 'Development' },
-    { label: 'Project Management', value: 'Project Management' },
-    { label: 'Quality Assurance', value: 'Quality Assurance' },
-    { label: 'Business Analysis', value: 'Business Analysis' },
-    { label: 'Design', value: 'Design' },
-    { label: 'DevOps', value: 'DevOps' },
-    { label: 'Human Resources', value: 'Human Resources' },
-    { label: 'Finance', value: 'Finance' },
-    { label: 'Administration', value: 'Administration' }
-  ];
+    if (filtered.length === 0) {
+      setManagerOptions([
+        { 
+          value: '', 
+          label: <span style={{ color: '#ff4d4f' }}>Manager doesn't exist</span>,
+          disabled: true 
+        }
+      ]);
+    } else {
+      setManagerOptions(filtered.map(manager => ({
+        value: `${manager.full_name} (${manager.employee_id || 'No ID'})`,
+        label: (
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            <div>
+              <div style={{ fontWeight: 500 }}>{manager.full_name}</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                ID: {manager.employee_id || 'No Employee ID'}
+              </div>
+            </div>
+          </div>
+        ),
+        managerId: manager.id
+      })));
+    }
+  };
+
+  const handleManagerSelect = (value, option) => {
+    if (option && option.managerId) {
+      form.setFieldValue('manager_id', option.managerId);
+      setManagerSearchValue(value);
+    }
+  };
+
+  const handleManagerSearch = (value) => {
+    setManagerSearchValue(value);
+    
+    // Clear manager_id if the search doesn't match any existing manager
+    const matchedManager = availableManagers.find(manager => 
+      `${manager.full_name} (${manager.employee_id || 'No ID'})` === value
+    );
+    
+    if (!matchedManager) {
+      form.setFieldValue('manager_id', null);
+    }
+  };
 
   return (
     <Form
@@ -221,16 +266,9 @@ function EmployeeForm({
             <Form.Item
               label="Position"
               name="position"
-              rules={[{ required: true, message: 'Please select position!' }]}
+              rules={[{ required: true, message: 'Please input position!' }]}
             >
-              <Select
-                placeholder="Select position"
-                options={positionOptions}
-                showSearch
-                filterOption={(input, option) =>
-                  option.label.toLowerCase().includes(input.toLowerCase())
-                }
-              />
+              <Input placeholder="e.g. Senior Developer, Project Manager, QA Engineer" />
             </Form.Item>
           </Col>
           
@@ -238,16 +276,9 @@ function EmployeeForm({
             <Form.Item
               label="Department"
               name="department"
-              rules={[{ required: true, message: 'Please select department!' }]}
+              rules={[{ required: true, message: 'Please input department!' }]}
             >
-              <Select
-                placeholder="Select department"
-                options={departmentOptions}
-                showSearch
-                filterOption={(input, option) =>
-                  option.label.toLowerCase().includes(input.toLowerCase())
-                }
-              />
+              <Input placeholder="e.g. Development, Project Management, Quality Assurance" />
             </Form.Item>
           </Col>
         </Row>
@@ -258,15 +289,7 @@ function EmployeeForm({
               label="Project Site"
               name="project_site"
             >
-              <Select
-                placeholder="Select project site (optional)"
-                options={projectSiteOptions}
-                showSearch
-                allowClear
-                filterOption={(input, option) =>
-                  option.label.toLowerCase().includes(input.toLowerCase())
-                }
-              />
+              <Input placeholder="e.g. Marina Bay Project, Orchard Road Development" />
             </Form.Item>
           </Col>
           
@@ -285,21 +308,27 @@ function EmployeeForm({
           <Col xs={24} md={12}>
             <Form.Item
               label="Manager"
-              name="manager_id"
-              help="Select the direct manager for this user"
+              name="manager_search"
+              help="Type to search for manager by name or ID"
             >
-              <Select
-                placeholder="Select manager (optional)"
-                options={availableManagers.map(manager => ({
-                  label: `${manager.full_name} (${manager.employee_id})`,
-                  value: manager.id
-                }))}
-                showSearch
+              <AutoComplete
+                value={managerSearchValue}
+                options={managerOptions}
+                onSelect={handleManagerSelect}
+                onSearch={handleManagerSearch}
+                placeholder="Type manager name to search..."
                 allowClear
-                filterOption={(input, option) =>
-                  option.label.toLowerCase().includes(input.toLowerCase())
+                notFoundContent={
+                  managerSearchValue ? 
+                  <span style={{ color: '#ff4d4f' }}>Manager doesn't exist</span> : 
+                  <span style={{ color: '#999' }}>Start typing to search managers</span>
                 }
               />
+            </Form.Item>
+            
+            {/* Hidden field to store actual manager_id */}
+            <Form.Item name="manager_id" hidden>
+              <Input type="hidden" />
             </Form.Item>
           </Col>
           

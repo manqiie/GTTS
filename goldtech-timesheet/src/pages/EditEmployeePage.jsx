@@ -1,4 +1,4 @@
-// src/pages/EditEmployeePage.jsx 
+// EditEmployeePage.jsx (keeping filename but updating for user management)
 import React, { useState, useEffect } from 'react';
 import { Form, Button, message, Spin, Alert } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
@@ -12,18 +12,18 @@ function EditEmployeePage() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { id } = useParams();
-  const { getEmployee, updateEmployee, loading: storeLoading } = useEmployeeStore(); // Get store loading state
+  const { getEmployee, updateEmployee, loading: storeLoading } = useEmployeeStore();
   
   const [employee, setEmployee] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Wait for store to finish loading before trying to get employee
+    // Wait for store to finish loading before trying to get user
     if (!storeLoading) {
       loadEmployee();
     }
-  }, [id, storeLoading]); // Watch both id and storeLoading
+  }, [id, storeLoading]);
 
   const loadEmployee = () => {
     setPageLoading(true);
@@ -33,20 +33,30 @@ function EditEmployeePage() {
       const emp = getEmployee(id);
       if (emp) {
         setEmployee(emp);
-        // Set form initial values
+        // Set form initial values with proper role ID conversion
         const initialValues = {
-          ...emp,
-          joinDate: dayjs(emp.joinDate)
+          employee_id: emp.employee_id,
+          email: emp.email,
+          full_name: emp.full_name,
+          phone: emp.phone,
+          position: emp.position,
+          department: emp.department,
+          project_site: emp.project_site,
+          company: emp.company,
+          join_date: dayjs(emp.join_date),
+          manager_id: emp.manager_id,
+          roles: emp.roles ? emp.roles.map(role => role.id) : [], // Convert role objects to IDs
+          status: emp.status
         };
         form.setFieldsValue(initialValues);
         setNotFound(false);
       } else {
-        console.log('Employee not found with ID:', id); // Debug log
+        console.log('User not found with ID:', id);
         setNotFound(true);
       }
     } catch (error) {
-      console.error('Error loading employee:', error);
-      message.error('Failed to load employee data');
+      console.error('Error loading user:', error);
+      message.error('Failed to load user data');
       setNotFound(true);
     } finally {
       setPageLoading(false);
@@ -55,23 +65,33 @@ function EditEmployeePage() {
 
   const handleFinish = async (values) => {
     try {
-      // Transform form values
+      // Transform form values to match database structure
       const updateData = {
-        ...values,
-        joinDate: values.joinDate.format('YYYY-MM-DD'),
+        employee_id: values.employee_id || null,
+        email: values.email,
+        full_name: values.full_name,
+        phone: values.phone || null,
+        position: values.position,
+        department: values.department,
+        project_site: values.project_site || null,
+        company: values.company || null,
+        join_date: values.join_date.format('YYYY-MM-DD'),
+        manager_id: values.manager_id || null,
+        roles: values.roles, // Array of role IDs
+        status: values.status
       };
 
       const updatedEmployee = updateEmployee(id, updateData);
       
       if (updatedEmployee) {
-        message.success(`Employee ${updatedEmployee.name} updated successfully!`);
+        message.success(`User ${updatedEmployee.full_name} updated successfully!`);
         navigate('/employee-management');
       } else {
-        message.error('Failed to update employee');
+        message.error('Failed to update user');
       }
     } catch (error) {
-      console.error('Error updating employee:', error);
-      message.error('Failed to update employee. Please try again.');
+      console.error('Error updating user:', error);
+      message.error('Failed to update user. Please try again.');
     }
   };
 
@@ -83,7 +103,7 @@ function EditEmployeePage() {
   if (storeLoading || pageLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <Spin size="large" tip="Loading employee data..." />
+        <Spin size="large" tip="Loading user data..." />
       </div>
     );
   }
@@ -92,21 +112,21 @@ function EditEmployeePage() {
     return (
       <div>
         <PageHeader
-          title="Employee Not Found"
+          title="User Not Found"
           breadcrumbs={[
             { title: 'Management' },
-            { title: 'Employee Management', path: '/employee-management' },
-            { title: 'Edit Employee' }
+            { title: 'User Management', path: '/employee-management' },
+            { title: 'Edit User' }
           ]}
         />
         <Alert
-          message="Employee Not Found"
-          description={`The employee with ID "${id}" doesn't exist or may have been removed.`}
+          message="User Not Found"
+          description={`The user with ID "${id}" doesn't exist or may have been removed.`}
           type="error"
           showIcon
           action={
             <Button onClick={handleBack}>
-              Back to Employee Management
+              Back to User Management
             </Button>
           }
         />
@@ -116,8 +136,8 @@ function EditEmployeePage() {
 
   const breadcrumbs = [
     { title: 'Management' },
-    { title: 'Employee Management', path: '/employee-management' },
-    { title: `Edit ${employee?.name}` }
+    { title: 'User Management', path: '/employee-management' },
+    { title: `Edit ${employee?.full_name}` }
   ];
 
   const submitButton = (
@@ -126,7 +146,7 @@ function EditEmployeePage() {
         <ArrowLeftOutlined /> Back
       </Button>
       <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-        Update Employee
+        Update User
       </Button>
     </div>
   );
@@ -134,9 +154,9 @@ function EditEmployeePage() {
   return (
     <div>
       <PageHeader
-        title={`Edit Employee: ${employee?.name}`}
+        title={`Edit User: ${employee?.full_name}`}
         breadcrumbs={breadcrumbs}
-        description={`Update information for ${employee?.name} (${employee?.employeeId})`}
+        description={`Update information for ${employee?.full_name} (${employee?.employee_id || 'No Employee ID'})`}
       />
 
       <div style={{ background: '#fff', padding: 24, borderRadius: 8 }}>

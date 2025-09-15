@@ -1,4 +1,5 @@
-// src/components/Sidebar.jsx - Fixed height and role-based menu
+
+// Sidebar.jsx - Complete Updated Version
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Space, Button, Modal, message } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -40,8 +41,8 @@ function Sidebar({ collapsed, setCollapsed }) {
       }
     ];
 
-    // Only show timesheet items for employees
-    if (user?.role === 'employee') {
+    // Only show timesheet items for employees (users with employee role)
+    if (user?.roles?.some(role => role.name === 'employee')) {
       baseItems.push(
         {
           type: 'divider',
@@ -64,8 +65,8 @@ function Sidebar({ collapsed, setCollapsed }) {
       );
     }
 
-    // Add management items based on user role/permissions
-    if (user?.permissions?.includes('timesheet.approve') || user?.role === 'manager' || user?.role === 'admin') {
+    // Add management items based on user roles
+    if (user?.roles?.some(role => ['manager', 'admin'].includes(role.name))) {
       baseItems.push(
         {
           type: 'divider',
@@ -83,23 +84,22 @@ function Sidebar({ collapsed, setCollapsed }) {
       );
     }
 
-    if (user?.permissions?.includes('timesheet.manage') || user?.role === 'admin') {
-      baseItems.push({
-        key: 'timesheet-management',
-        icon: <CheckSquareOutlined />,
-        label: 'Timesheet Management',
-      });
+    if (user?.roles?.some(role => role.name === 'admin')) {
+      baseItems.push(
+        {
+          key: 'timesheet-management',
+          icon: <CheckSquareOutlined />,
+          label: 'Timesheet Management',
+        },
+        {
+          key: 'employee-management',
+          icon: <TeamOutlined />,
+          label: 'User Management', // Updated label
+        }
+      );
     }
 
-    if (user?.permissions?.includes('employee.manage') || user?.role === 'admin') {
-      baseItems.push({
-        key: 'employee-management',
-        icon: <TeamOutlined />,
-        label: 'Staff Management',
-      });
-    }
-
-    if (user?.permissions?.includes('system.admin') || user?.role === 'admin') {
+    if (user?.roles?.some(role => role.name === 'admin')) {
       baseItems.push(
         {
           key: 'clients',
@@ -156,7 +156,7 @@ function Sidebar({ collapsed, setCollapsed }) {
     if (path === '/timesheet-management') return 'timesheet-management';
     if (path === '/clients') return 'clients';
     if (path === '/invoices') return 'invoices';
-    return 'home'; // default to home
+    return 'home';
   };
 
   const handleLogoutClick = () => {
@@ -176,17 +176,18 @@ function Sidebar({ collapsed, setCollapsed }) {
 
   const getUserDisplayName = () => {
     if (!user) return 'User';
-    return user.name.split(' ')[0]; // First name only
+    return user.full_name ? user.full_name.split(' ')[0] : user.name?.split(' ')[0] || 'User';
   };
 
   const getUserRole = () => {
-    if (!user) return '';
-    const roleMap = {
-      employee: 'Employee',
-      manager: 'Manager',
-      admin: 'Administrator'
-    };
-    return roleMap[user.role] || user.role;
+    if (!user || !user.roles) return '';
+    
+    // Show primary role (admin > manager > employee)
+    if (user.roles.some(role => role.name === 'admin')) return 'Administrator';
+    if (user.roles.some(role => role.name === 'manager')) return 'Manager';
+    if (user.roles.some(role => role.name === 'employee')) return 'Employee';
+    
+    return user.roles[0]?.description || '';
   };
 
   return (

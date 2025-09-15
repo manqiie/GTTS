@@ -1,4 +1,4 @@
-// src/pages/EmployeeManagementPage.jsx
+// EmployeeManagementPage.jsx (keeping filename but updating for user management)
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, Select, Button, Space, message } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
@@ -23,6 +23,7 @@ function EmployeeManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     status: 'all',
+    role: 'all',
     position: 'all',
     projectSite: 'all'
   });
@@ -56,11 +57,11 @@ function EmployeeManagementPage() {
       const updatedEmployee = toggleEmployeeStatus(id);
       if (updatedEmployee) {
         message.success(
-          `Employee ${updatedEmployee.status === 'active' ? 'activated' : 'deactivated'} successfully`
+          `User ${updatedEmployee.status === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`
         );
       }
     } catch (error) {
-      message.error('Failed to update employee status');
+      message.error('Failed to update user status');
     }
   };
 
@@ -70,8 +71,18 @@ function EmployeeManagementPage() {
 
   // Get unique values for filter dropdowns
   const getUniqueValues = (key) => {
-    const values = [...new Set(employees.map(emp => emp[key]))].sort();
+    const values = [...new Set(employees.map(emp => emp[key]).filter(Boolean))].sort();
     return values.map(value => ({ label: value, value }));
+  };
+
+  const getRoleOptions = () => {
+    const roleSet = new Set();
+    employees.forEach(emp => {
+      if (emp.roles) {
+        emp.roles.forEach(role => roleSet.add(role.name));
+      }
+    });
+    return Array.from(roleSet).map(role => ({ label: role.charAt(0).toUpperCase() + role.slice(1), value: role }));
   };
 
   const positionOptions = [
@@ -81,27 +92,32 @@ function EmployeeManagementPage() {
 
   const projectSiteOptions = [
     { label: 'All Project Sites', value: 'all' },
-    ...getUniqueValues('projectSite')
+    ...getUniqueValues('project_site')
+  ];
+
+  const roleOptions = [
+    { label: 'All Roles', value: 'all' },
+    ...getRoleOptions()
   ];
 
   const breadcrumbs = [
     { title: 'Management' },
-    { title: 'Employee Management' }
+    { title: 'User Management' }
   ];
 
   return (
     <div>
       <PageHeader
-        title="Employee Management"
+        title="User Management"
         breadcrumbs={breadcrumbs}
-        description="Manage employee information, assignments, and status"
+        description="Manage user accounts, roles, and permissions"
         extra={
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
             onClick={handleCreateNew}
           >
-            Add New Employee
+            Add New User
           </Button>
         }
       />
@@ -109,9 +125,9 @@ function EmployeeManagementPage() {
       {/* Search and Filters */}
       <Card style={{ marginBottom: 20 }}>
         <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={12} md={6}>
             <Search
-              placeholder="Search by name, ID, position..."
+              placeholder="Search by name, ID, email..."
               allowClear
               onSearch={handleSearch}
               onChange={(e) => handleSearch(e.target.value)}
@@ -125,13 +141,22 @@ function EmployeeManagementPage() {
               onChange={(value) => handleFilterChange('status', value)}
               options={[
                 { label: 'All Status', value: 'all' },
-                { label: 'Active', value: 'active' },
-                { label: 'Inactive', value: 'inactive' }
+                { label: 'Active', value: 'ACTIVE' },
+                { label: 'Inactive', value: 'INACTIVE' }
               ]}
             />
           </Col>
+
+          <Col xs={12} sm={6} md={4}>
+            <Select
+              style={{ width: '100%' }}
+              value={filters.role}
+              onChange={(value) => handleFilterChange('role', value)}
+              options={roleOptions}
+            />
+          </Col>
           
-          <Col xs={12} sm={6} md={6}>
+          <Col xs={12} sm={6} md={5}>
             <Select
               style={{ width: '100%' }}
               value={filters.position}
@@ -140,7 +165,7 @@ function EmployeeManagementPage() {
             />
           </Col>
           
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={12} sm={6} md={5}>
             <Select
               style={{ width: '100%' }}
               value={filters.projectSite}
@@ -151,7 +176,7 @@ function EmployeeManagementPage() {
         </Row>
       </Card>
 
-      {/* Employee Table */}
+      {/* User Table */}
       <Card>
         <EmployeeTable
           employees={filteredEmployees}
@@ -161,7 +186,7 @@ function EmployeeManagementPage() {
         />
       </Card>
 
-      {/* Employee View Modal */}
+      {/* User View Modal */}
       <EmployeeViewModal
         visible={viewModalVisible}
         employee={selectedEmployee}

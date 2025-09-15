@@ -1,4 +1,4 @@
-// src/components/Employee/EmployeeTable.jsx
+// EmployeeTable.jsx 
 import React from 'react';
 import { Table, Tag, Space, Button, Popconfirm, Tooltip } from 'antd';
 import { 
@@ -21,20 +21,57 @@ function EmployeeTable({
   const columns = [
     {
       title: 'Employee ID',
-      dataIndex: 'employeeId',
-      key: 'employeeId',
+      dataIndex: 'employee_id',
+      key: 'employee_id',
       width: 120,
-      sorter: (a, b) => a.employeeId.localeCompare(b.employeeId),
+      sorter: (a, b) => {
+        // Handle null/undefined employee_id for managers
+        const aId = a.employee_id || '';
+        const bId = b.employee_id || '';
+        return aId.localeCompare(bId);
+      },
+      render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
     },
     {
       title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      sorter: (a, b) => a.name.localeCompare(b.name),
+      dataIndex: 'full_name',
+      key: 'full_name',
+      sorter: (a, b) => a.full_name.localeCompare(b.full_name),
       render: (text, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{text}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>{record.email}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Roles',
+      dataIndex: 'roles',
+      key: 'roles',
+      width: 150,
+      filters: [
+        { text: 'Admin', value: 'admin' },
+        { text: 'Manager', value: 'manager' },
+        { text: 'Employee', value: 'employee' },
+      ],
+      onFilter: (value, record) => {
+        return record.roles && record.roles.some(role => role.name === value);
+      },
+      render: (roles) => (
+        <div>
+          {roles && roles.map(role => (
+            <Tag 
+              key={role.id} 
+              color={
+                role.name === 'admin' ? 'red' : 
+                role.name === 'manager' ? 'orange' : 
+                'blue'
+              }
+              style={{ marginBottom: 2 }}
+            >
+              {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+            </Tag>
+          ))}
         </div>
       ),
     },
@@ -46,15 +83,25 @@ function EmployeeTable({
     },
     {
       title: 'Project Site',
-      dataIndex: 'projectSite',
-      key: 'projectSite',
-      sorter: (a, b) => a.projectSite.localeCompare(b.projectSite),
+      dataIndex: 'project_site',
+      key: 'project_site',
+      sorter: (a, b) => {
+        const aProject = a.project_site || '';
+        const bProject = b.project_site || '';
+        return aProject.localeCompare(bProject);
+      },
+      render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
     },
     {
       title: 'Manager',
-      dataIndex: 'managerName',
-      key: 'managerName',
-      sorter: (a, b) => a.managerName.localeCompare(b.managerName),
+      dataIndex: 'manager_name',
+      key: 'manager_name',
+      sorter: (a, b) => {
+        const aManager = a.manager_name || '';
+        const bManager = b.manager_name || '';
+        return aManager.localeCompare(bManager);
+      },
+      render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
     },
     {
       title: 'Status',
@@ -62,22 +109,22 @@ function EmployeeTable({
       key: 'status',
       width: 100,
       filters: [
-        { text: 'Active', value: 'active' },
-        { text: 'Inactive', value: 'inactive' },
+        { text: 'Active', value: 'ACTIVE' },
+        { text: 'Inactive', value: 'INACTIVE' },
       ],
       onFilter: (value, record) => record.status === value,
       render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
+        <Tag color={status === 'ACTIVE' ? 'green' : 'red'}>
+          {status === 'ACTIVE' ? 'Active' : 'Inactive'}
         </Tag>
       ),
     },
     {
       title: 'Join Date',
-      dataIndex: 'joinDate',
-      key: 'joinDate',
+      dataIndex: 'join_date',
+      key: 'join_date',
       width: 120,
-      sorter: (a, b) => dayjs(a.joinDate).unix() - dayjs(b.joinDate).unix(),
+      sorter: (a, b) => dayjs(a.join_date).unix() - dayjs(b.join_date).unix(),
       render: (date) => dayjs(date).format('MMM DD, YYYY'),
     },
     {
@@ -95,7 +142,7 @@ function EmployeeTable({
             />
           </Tooltip>
           
-          <Tooltip title="Edit Employee">
+          <Tooltip title="Edit User">
             <Button 
               type="text" 
               icon={<EditOutlined />} 
@@ -105,17 +152,17 @@ function EmployeeTable({
           </Tooltip>
           
           <Popconfirm
-            title={`${record.status === 'active' ? 'Deactivate' : 'Activate'} Employee`}
-            description={`Are you sure you want to ${record.status === 'active' ? 'deactivate' : 'activate'} ${record.name}?`}
+            title={`${record.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} User`}
+            description={`Are you sure you want to ${record.status === 'ACTIVE' ? 'deactivate' : 'activate'} ${record.full_name}?`}
             onConfirm={() => onToggleStatus(record.id)}
             okText="Yes"
             cancelText="No"
           >
-            <Tooltip title={record.status === 'active' ? 'Deactivate' : 'Activate'}>
+            <Tooltip title={record.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}>
               <Button 
                 type="text" 
-                icon={record.status === 'active' ? <UserDeleteOutlined /> : <UserAddOutlined />}
-                danger={record.status === 'active'}
+                icon={record.status === 'ACTIVE' ? <UserDeleteOutlined /> : <UserAddOutlined />}
+                danger={record.status === 'ACTIVE'}
                 size="small"
               />
             </Tooltip>
@@ -135,11 +182,11 @@ function EmployeeTable({
         showSizeChanger: true,
         showQuickJumper: true,
         showTotal: (total, range) => 
-          `${range[0]}-${range[1]} of ${total} employees`,
+          `${range[0]}-${range[1]} of ${total} users`,
         pageSizeOptions: ['10', '20', '50', '100'],
         defaultPageSize: 20,
       }}
-      scroll={{ x: 1200 }}
+      scroll={{ x: 1400 }}
     />
   );
 }

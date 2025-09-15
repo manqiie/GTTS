@@ -1,4 +1,4 @@
-// src/pages/CreateEmployeePage.jsx
+// CreateEmployeePage.jsx (keeping filename but updating for user management)
 import React from 'react';
 import { Form, Button, message } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
@@ -14,21 +14,29 @@ function CreateEmployeePage() {
 
   const handleFinish = async (values) => {
     try {
-      // Transform form values
-      const employeeData = {
-        ...values,
-        joinDate: values.joinDate.format('YYYY-MM-DD'),
-        // Set default values
-        managerId: `MGR${Math.floor(Math.random() * 100).toString().padStart(3, '0')}`, // Mock manager ID
+      // Transform form values to match database structure
+      const userData = {
+        employee_id: values.employee_id || null,
+        email: values.email,
+        password: values.password, // In real app, this would be hashed on backend
+        full_name: values.full_name,
+        phone: values.phone || null,
+        position: values.position,
+        department: values.department,
+        project_site: values.project_site || null,
+        company: values.company || null,
+        join_date: values.join_date.format('YYYY-MM-DD'),
+        manager_id: values.manager_id || null,
+        roles: values.roles // Array of role IDs
       };
 
-      const newEmployee = createEmployee(employeeData);
+      const newUser = createEmployee(userData);
       
-      message.success(`Employee ${newEmployee.name} created successfully!`);
+      message.success(`User ${newUser.full_name} created successfully!`);
       navigate('/employee-management');
     } catch (error) {
-      console.error('Error creating employee:', error);
-      message.error('Failed to create employee. Please try again.');
+      console.error('Error creating user:', error);
+      message.error('Failed to create user. Please try again.');
     }
   };
 
@@ -38,8 +46,8 @@ function CreateEmployeePage() {
 
   const breadcrumbs = [
     { title: 'Management' },
-    { title: 'Employee Management', path: '/employee-management' },
-    { title: 'Create New Employee' }
+    { title: 'User Management', path: '/employee-management' },
+    { title: 'Create New User' }
   ];
 
   const submitButton = (
@@ -48,7 +56,7 @@ function CreateEmployeePage() {
         <ArrowLeftOutlined /> Back
       </Button>
       <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
-        Create Employee
+        Create User
       </Button>
     </div>
   );
@@ -56,9 +64,9 @@ function CreateEmployeePage() {
   return (
     <div>
       <PageHeader
-        title="Create New Employee"
+        title="Create New User"
         breadcrumbs={breadcrumbs}
-        description="Add a new employee to the system"
+        description="Add a new user to the system with roles and permissions"
       />
 
       <div style={{ background: '#fff', padding: 24, borderRadius: 8 }}>

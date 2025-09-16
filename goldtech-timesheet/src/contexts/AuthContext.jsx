@@ -1,4 +1,4 @@
-// AuthContext.jsx - Complete Updated Version
+// AuthContext.jsx - Updated for Backend Integration
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -15,21 +15,43 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // API base URL - adjust as needed
+  const API_BASE_URL = 'http://localhost:8080/api';
+
   // Check for existing session on mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
-  const checkAuthStatus = () => {
+  const checkAuthStatus = async () => {
     try {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        // Validate token with backend
+        const response = await fetch(`${API_BASE_URL}/auth/validate`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.valid && data.user) {
+            setUser(data.user);
+          } else {
+            // Token invalid, remove it
+            localStorage.removeItem('authToken');
+          }
+        } else {
+          // Token invalid, remove it
+          localStorage.removeItem('authToken');
+        }
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
-      localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
     } finally {
       setLoading(false);
     }
@@ -37,31 +59,99 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // Mock authentication - check against sample users with new structure
-      const mockUser = await mockAuthenticate(credentials);
-      
-      if (mockUser) {
-        setUser(mockUser);
-        localStorage.setItem('currentUser', JSON.stringify(mockUser));
-        return { success: true, user: mockUser };
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentials)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Store token
+        localStorage.setItem('authToken', data.token);
+        
+        // Set user data
+        setUser(data.user);
+        
+        return { success: true, user: data.user };
       } else {
-        return { success: false, error: 'Invalid credentials' };
+        return { success: false, error: data.message || 'Login failed' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: 'Login failed. Please try again.' };
+      return { success: false, error: 'Network error. Please try again.' };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('currentUser');
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (token) {
+        // Call backend logout endpoint
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state regardless of backend response
+      setUser(null);
+      localStorage.removeItem('authToken');
+    }
   };
 
-  const updateProfile = (updatedData) => {
-    const updatedUser = { ...user, ...updatedData };
-    setUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+  const updateProfile = async (updatedData) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // For now, just update local state
+      // In the future, you can add a backend API call here
+      const updatedUser = { ...user, ...updatedData };
+      setUser(updatedUser);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Profile update error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
   };
 
   const value = {
@@ -69,6 +159,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateProfile,
+    refreshUser,
     loading,
     isAuthenticated: !!user
   };
@@ -78,109 +169,4 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-// Mock authentication function with new user structure
-const mockAuthenticate = async (credentials) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-
-  // Sample users for demo - matching new database structure
-  const sampleUsers = [
-    {
-      id: 'USR001',
-      employee_id: 'GT001',
-      email: 'john.smith@goldtech.com',
-      full_name: 'John Smith',
-      phone: '+65 9123 4567',
-      position: 'Senior Developer',
-      department: 'Development',
-      project_site: 'Marina Bay Project',
-      company: null,
-      join_date: '2023-01-15',
-      manager_id: 'USR002',
-      status: 'ACTIVE',
-      roles: [
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      // Legacy compatibility for existing components
-      name: 'John Smith',
-      role: 'employee',
-      permissions: ['timesheet.create', 'timesheet.view', 'timesheet.edit'],
-      employeeId: 'GT001',
-      projectSite: 'Marina Bay Project',
-      managerName: 'Alice Johnson'
-    },
-    {
-      id: 'USR002',
-      employee_id: 'MGR001',
-      email: 'alice.johnson@goldtech.com',
-      full_name: 'Alice Johnson',
-      phone: '+65 9234 5678',
-      position: 'Project Manager',
-      department: 'Project Management',
-      project_site: 'Marina Bay Project',
-      company: null,
-      join_date: '2022-03-10',
-      manager_id: 'USR006',
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' },
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      // Legacy compatibility
-      name: 'Alice Johnson',
-      role: 'manager',
-      permissions: [
-        'timesheet.create', 'timesheet.view', 'timesheet.edit',
-        'timesheet.approve', 'employee.view'
-      ],
-      employeeId: 'MGR001',
-      projectSite: 'Marina Bay Project',
-      managerName: 'Admin User'
-    },
-    {
-      id: 'USR006',
-      employee_id: null,
-      email: 'admin@goldtech.com',
-      full_name: 'Admin User',
-      phone: '+65 9345 6789',
-      position: 'System Administrator',
-      department: 'Administration',
-      project_site: null,
-      company: 'GoldTech Resources',
-      join_date: '2021-01-01',
-      manager_id: null,
-      status: 'ACTIVE',
-      roles: [
-        { id: 1, name: 'admin', description: 'Administrator' }
-      ],
-      // Legacy compatibility
-      name: 'Admin User',
-      role: 'admin',
-      permissions: [
-        'timesheet.create', 'timesheet.view', 'timesheet.edit',
-        'timesheet.approve', 'timesheet.manage',
-        'employee.create', 'employee.view', 'employee.edit', 'employee.manage',
-        'system.admin'
-      ],
-      employeeId: 'ADMIN001',
-      projectSite: 'Head Office',
-      managerName: null
-    }
-  ];
-
-  // Simple credential check - can use email or employee_id
-  const user = sampleUsers.find(u => 
-    u.email === credentials.email || u.employee_id === credentials.email
-  );
-
-  // For demo purposes, accept any password for existing users
-  if (user && credentials.password) {
-    // Update last login time
-    user.last_login_at = new Date().toISOString();
-    return user;
-  }
-
-  return null;
 };

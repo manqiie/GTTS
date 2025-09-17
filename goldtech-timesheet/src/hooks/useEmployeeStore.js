@@ -1,133 +1,183 @@
-// useEmployeeStore.js - Complete User Store for User Management
+// useEmployeeStore.js - Updated to use real API instead of localStorage
 import { useState, useEffect } from 'react';
+import apiService from '../services/apiService';
+import { message } from 'antd';
 
 export function useEmployeeStore() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load employees from localStorage on mount
+  // Load employees from API on mount
   useEffect(() => {
     loadEmployees();
   }, []);
 
-  const loadEmployees = async () => {
+  const loadEmployees = async (filters = {}) => {
     setLoading(true);
     try {
-      // Add a small delay to simulate real loading
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const stored = localStorage.getItem('users');
-      if (stored) {
-        const data = JSON.parse(stored);
-        console.log('Loaded users from localStorage:', data);
-        setEmployees(data);
+      const response = await apiService.getUsers({
+        page: 0,
+        size: 1000, // Get all users for now
+        sortBy: 'fullName',
+        sortDir: 'asc',
+        ...filters
+      });
+
+      if (response.success && response.data) {
+        // Transform backend data to frontend format
+        const transformedEmployees = response.data.map(user => 
+          apiService.transformUserData(user)
+        );
+        setEmployees(transformedEmployees);
       } else {
-        console.log('No stored data, creating sample users');
-        const sampleData = generateSampleUsers();
-        setEmployees(sampleData);
-        localStorage.setItem('users', JSON.stringify(sampleData));
+        console.error('Failed to load users:', response.message);
+        message.error('Failed to load users');
+        setEmployees([]);
       }
     } catch (error) {
       console.error('Error loading users:', error);
+      message.error('Error loading users: ' + error.message);
       setEmployees([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveToStorage = (updatedEmployees) => {
+  const createEmployee = async (employeeData) => {
     try {
-      localStorage.setItem('users', JSON.stringify(updatedEmployees));
-    } catch (error) {
-      console.error('Error saving users:', error);
-    }
-  };
+      // Transform frontend data to backend format
+      const backendData = {
+        employeeId: employeeData.employee_id || null,
+        email: employeeData.email,
+        password: employeeData.password,
+        fullName: employeeData.full_name,
+        phone: employeeData.phone || null,
+        position: employeeData.position,
+        department: employeeData.department,
+        projectSite: employeeData.project_site || null,
+        company: employeeData.company || null,
+        joinDate: employeeData.join_date, // Should already be in YYYY-MM-DD format
+        managerId: employeeData.manager_id || null,
+        roles: employeeData.roles // Array of role IDs
+      };
 
-  const createEmployee = (employeeData) => {
-    const newEmployee = {
-      ...employeeData,
-      id: generateId(),
-      status: 'ACTIVE',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      last_login_at: null,
-      // Convert role IDs to role objects for display
-      roles: employeeData.roles.map(roleId => {
-        const roleMap = {
-          1: { id: 1, name: 'admin', description: 'Administrator' },
-          2: { id: 2, name: 'manager', description: 'Manager' },
-          3: { id: 3, name: 'employee', description: 'Employee' }
-        };
-        return roleMap[roleId];
-      }).filter(Boolean)
-    };
+      const response = await apiService.createUser(backendData);
 
-    // Get manager name if manager_id is provided
-    if (newEmployee.manager_id) {
-      const manager = employees.find(emp => emp.id === newEmployee.manager_id);
-      newEmployee.manager_name = manager ? manager.full_name : null;
-    }
-
-    const updatedEmployees = [...employees, newEmployee];
-    setEmployees(updatedEmployees);
-    saveToStorage(updatedEmployees);
-    return newEmployee;
-  };
-
-  const updateEmployee = (id, updates) => {
-    const updatedEmployees = employees.map(emp => {
-      if (emp.id === id) {
-        const updatedEmp = { ...emp, ...updates, updated_at: new Date().toISOString() };
+      if (response.success && response.data) {
+        const transformedUser = apiService.transformUserData(response.data);
         
-        // Convert role IDs to role objects if roles are being updated
-        if (updates.roles && Array.isArray(updates.roles) && typeof updates.roles[0] === 'number') {
-          const roleMap = {
-            1: { id: 1, name: 'admin', description: 'Administrator' },
-            2: { id: 2, name: 'manager', description: 'Manager' },
-            3: { id: 3, name: 'employee', description: 'Employee' }
-          };
-          updatedEmp.roles = updates.roles.map(roleId => roleMap[roleId]).filter(Boolean);
-        }
-
-        // Update manager name if manager_id is being updated
-        if (updates.manager_id) {
-          const manager = employees.find(emp => emp.id === updates.manager_id);
-          updatedEmp.manager_name = manager ? manager.full_name : null;
-        } else if (updates.manager_id === null) {
-          updatedEmp.manager_name = null;
-        }
-
-        return updatedEmp;
+        // Update local state
+        setEmployees(prev => [...prev, transformedUser]);
+        
+        message.success(`User ${transformedUser.full_name} created successfully!`);
+        return transformedUser;
+      } else {
+        const errorMsg = response.message || 'Failed to create user';
+        message.error(errorMsg);
+        throw new Error(errorMsg);
       }
-      return emp;
-    });
-    
-    setEmployees(updatedEmployees);
-    saveToStorage(updatedEmployees);
-    return updatedEmployees.find(emp => emp.id === id);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      message.error('Failed to create user: ' + error.message);
+      throw error;
+    }
   };
 
-  const deleteEmployee = (id) => {
-    const updatedEmployees = employees.filter(emp => emp.id !== id);
-    setEmployees(updatedEmployees);
-    saveToStorage(updatedEmployees);
-    return true;
+  const updateEmployee = async (id, updates) => {
+    try {
+      // Transform frontend updates to backend format
+      const backendUpdates = {
+        employeeId: updates.employee_id || null,
+        email: updates.email,
+        fullName: updates.full_name,
+        phone: updates.phone || null,
+        position: updates.position,
+        department: updates.department,
+        projectSite: updates.project_site || null,
+        company: updates.company || null,
+        joinDate: updates.join_date,
+        managerId: updates.manager_id || null,
+        roles: updates.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
+        status: updates.status
+      };
+
+      const response = await apiService.updateUser(id, backendUpdates);
+
+      if (response.success && response.data) {
+        const transformedUser = apiService.transformUserData(response.data);
+        
+        // Update local state
+        setEmployees(prev => 
+          prev.map(emp => emp.id === id ? transformedUser : emp)
+        );
+        
+        message.success(`User ${transformedUser.full_name} updated successfully!`);
+        return transformedUser;
+      } else {
+        const errorMsg = response.message || 'Failed to update user';
+        message.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      message.error('Failed to update user: ' + error.message);
+      throw error;
+    }
   };
 
-  const toggleEmployeeStatus = (id) => {
-    const employee = employees.find(emp => emp.id === id);
-    if (employee) {
-      const newStatus = employee.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      return updateEmployee(id, { status: newStatus });
+  const deleteEmployee = async (id) => {
+    try {
+      const response = await apiService.deleteUser(id);
+
+      if (response.success) {
+        // Update local state
+        setEmployees(prev => prev.filter(emp => emp.id !== id));
+        
+        message.success('User deleted successfully');
+        return true;
+      } else {
+        const errorMsg = response.message || 'Failed to delete user';
+        message.error(errorMsg);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      message.error('Failed to delete user: ' + error.message);
+      return false;
+    }
+  };
+
+  const toggleEmployeeStatus = async (id) => {
+    try {
+      const response = await apiService.toggleUserStatus(id);
+
+      if (response.success && response.data) {
+        const transformedUser = apiService.transformUserData(response.data);
+        
+        // Update local state
+        setEmployees(prev => 
+          prev.map(emp => emp.id === id ? transformedUser : emp)
+        );
+        
+        const statusMsg = transformedUser.status === 'ACTIVE' ? 'activated' : 'deactivated';
+        message.success(`User ${statusMsg} successfully`);
+        return transformedUser;
+      } else {
+        const errorMsg = response.message || 'Failed to update user status';
+        message.error(errorMsg);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      message.error('Failed to update user status: ' + error.message);
+      return null;
     }
   };
 
   const getEmployee = (id) => {
-    console.log('Looking for user with ID:', id);
-    console.log('Available users:', employees.map(e => e.id));
-    const found = employees.find(emp => emp.id === id);
-    console.log('Found user:', found);
-    return found;
+    // Convert string ID to number if necessary
+    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+    return employees.find(emp => emp.id === numId);
   };
 
   const getActiveEmployees = () => {
@@ -140,11 +190,19 @@ export function useEmployeeStore() {
     );
   };
 
-  const getManagers = () => {
-    return employees.filter(emp => 
-      emp.roles && emp.roles.some(role => role.name === 'manager' || role.name === 'admin') &&
-      emp.status === 'ACTIVE'
-    );
+  const getManagers = async () => {
+    try {
+      const response = await apiService.getManagers();
+      if (response.success && response.data) {
+        return response.data.map(manager => 
+          apiService.transformUserData(manager)
+        );
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading managers:', error);
+      return [];
+    }
   };
 
   const searchEmployees = (searchTerm, filters = {}) => {
@@ -177,64 +235,78 @@ export function useEmployeeStore() {
       );
     }
 
-    // Dropdown-based filters - exact match filtering
-    if (filters.position && filters.position !== 'all') {
-      filteredEmployees = filteredEmployees.filter(emp => emp.position === filters.position);
-    }
-
-    if (filters.department && filters.department !== 'all') {
-      filteredEmployees = filteredEmployees.filter(emp => emp.department === filters.department);
-    }
-
-    if (filters.projectSite && filters.projectSite !== 'all') {
-      filteredEmployees = filteredEmployees.filter(emp => emp.project_site === filters.projectSite);
-    }
-
-    if (filters.company && filters.company !== 'all') {
-      filteredEmployees = filteredEmployees.filter(emp => emp.company === filters.company);
-    }
+    // Other filters
+    Object.keys(filters).forEach(key => {
+      if (filters[key] && filters[key] !== 'all' && key !== 'status' && key !== 'role') {
+        const field = key === 'projectSite' ? 'project_site' : key;
+        filteredEmployees = filteredEmployees.filter(emp => emp[field] === filters[key]);
+      }
+    });
 
     return filteredEmployees;
   };
 
-  const getEmployeeStats = () => {
-    const total = employees.length;
-    const active = employees.filter(emp => emp.status === 'ACTIVE').length;
-    const inactive = employees.filter(emp => emp.status === 'INACTIVE').length;
-    
-    const roleStats = {
-      admin: employees.filter(emp => emp.roles?.some(role => role.name === 'admin')).length,
-      manager: employees.filter(emp => emp.roles?.some(role => role.name === 'manager')).length,
-      employee: employees.filter(emp => emp.roles?.some(role => role.name === 'employee')).length
-    };
-
-    const departmentStats = {};
-    employees.forEach(emp => {
-      if (emp.department) {
-        departmentStats[emp.department] = (departmentStats[emp.department] || 0) + 1;
+  const getEmployeeStats = async () => {
+    try {
+      const response = await apiService.getUserStats();
+      if (response.success && response.data) {
+        return response.data;
       }
-    });
+      
+      // Fallback to local calculation
+      const total = employees.length;
+      const active = employees.filter(emp => emp.status === 'ACTIVE').length;
+      const inactive = employees.filter(emp => emp.status === 'INACTIVE').length;
+      
+      const roleStats = {
+        admin: employees.filter(emp => emp.roles?.some(role => role.name === 'admin')).length,
+        manager: employees.filter(emp => emp.roles?.some(role => role.name === 'manager')).length,
+        employee: employees.filter(emp => emp.roles?.some(role => role.name === 'employee')).length
+      };
 
-    return {
-      total,
-      active,
-      inactive,
-      roleStats,
-      departmentStats
-    };
+      const departmentStats = {};
+      employees.forEach(emp => {
+        if (emp.department) {
+          departmentStats[emp.department] = (departmentStats[emp.department] || 0) + 1;
+        }
+      });
+
+      return { total, active, inactive, roleStats, departmentStats };
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      return { total: 0, active: 0, inactive: 0, roleStats: {}, departmentStats: {} };
+    }
   };
 
-  const bulkUpdateEmployees = (employeeIds, updates) => {
-    const updatedEmployees = employees.map(emp => {
-      if (employeeIds.includes(emp.id)) {
-        return { ...emp, ...updates, updated_at: new Date().toISOString() };
-      }
-      return emp;
-    });
+  const bulkUpdateEmployees = async (employeeIds, updates) => {
+    try {
+      const response = await apiService.bulkUpdateUsers(employeeIds, updates);
 
-    setEmployees(updatedEmployees);
-    saveToStorage(updatedEmployees);
-    return updatedEmployees.filter(emp => employeeIds.includes(emp.id));
+      if (response.success && response.data) {
+        const transformedUsers = response.data.map(user => 
+          apiService.transformUserData(user)
+        );
+
+        // Update local state
+        setEmployees(prev => 
+          prev.map(emp => {
+            const updated = transformedUsers.find(u => u.id === emp.id);
+            return updated || emp;
+          })
+        );
+
+        message.success('Users updated successfully');
+        return transformedUsers;
+      } else {
+        const errorMsg = response.message || 'Failed to update users';
+        message.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Error bulk updating users:', error);
+      message.error('Failed to update users: ' + error.message);
+      throw error;
+    }
   };
 
   const validateEmployee = (employeeData) => {
@@ -273,23 +345,8 @@ export function useEmployeeStore() {
       errors.push('Phone must be in Singapore format: +65 1234 5678');
     }
 
-    // Check for duplicate email
-    const existingEmployee = employees.find(emp => 
-      emp.email === employeeData.email && emp.id !== employeeData.id
-    );
-    if (existingEmployee) {
-      errors.push('Email already exists');
-    }
-
-    // Check for duplicate employee_id if provided
-    if (employeeData.employee_id) {
-      const existingEmployeeId = employees.find(emp => 
-        emp.employee_id === employeeData.employee_id && emp.id !== employeeData.id
-      );
-      if (existingEmployeeId) {
-        errors.push('Employee ID already exists');
-      }
-    }
+    // Note: Duplicate checking is now handled by the backend
+    // The backend will return appropriate error messages
 
     return {
       isValid: errors.length === 0,
@@ -315,310 +372,3 @@ export function useEmployeeStore() {
     loadEmployees
   };
 }
-
-// Utility functions
-const generateId = () => {
-  return 'USR' + Date.now().toString() + Math.random().toString(36).substr(2, 5);
-};
-
-const generateSampleUsers = () => {
-  return [
-    {
-      id: 'USR001',
-      employee_id: 'GT001',
-      email: 'john.smith@goldtech.com',
-      full_name: 'John Smith',
-      phone: '+65 9123 4567',
-      position: 'Senior Developer',
-      department: 'Development',
-      project_site: 'Marina Bay Project',
-      company: null,
-      join_date: '2023-01-15',
-      manager_id: 'USR002',
-      manager_name: 'Alice Johnson',
-      status: 'ACTIVE',
-      roles: [
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2023-01-15T08:00:00Z',
-      updated_at: '2024-01-15T08:00:00Z',
-      last_login_at: '2024-01-20T09:30:00Z'
-    },
-    {
-      id: 'USR002',
-      employee_id: 'MGR001',
-      email: 'alice.johnson@goldtech.com',
-      full_name: 'Alice Johnson',
-      phone: '+65 9234 5678',
-      position: 'Project Manager',
-      department: 'Project Management',
-      project_site: 'Marina Bay Project',
-      company: null,
-      join_date: '2022-11-01',
-      manager_id: 'USR006',
-      manager_name: 'Admin User',
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' },
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2022-11-01T08:00:00Z',
-      updated_at: '2024-01-10T08:00:00Z',
-      last_login_at: '2024-01-20T08:15:00Z'
-    },
-    {
-      id: 'USR003',
-      employee_id: 'GT003',
-      email: 'michael.brown@goldtech.com',
-      full_name: 'Michael Brown',
-      phone: '+65 9345 6789',
-      position: 'QA Engineer',
-      department: 'Quality Assurance',
-      project_site: 'Sentosa Resort',
-      company: null,
-      join_date: '2023-03-20',
-      manager_id: 'USR002',
-      manager_name: 'Alice Johnson',
-      status: 'INACTIVE',
-      roles: [
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2023-03-20T08:00:00Z',
-      updated_at: '2024-02-01T08:00:00Z',
-      last_login_at: '2024-01-15T14:22:00Z'
-    },
-    {
-      id: 'USR004',
-      employee_id: 'GT004',
-      email: 'emily.chen@goldtech.com',
-      full_name: 'Emily Chen',
-      phone: '+65 9456 7890',
-      position: 'UI/UX Designer',
-      department: 'Design',
-      project_site: 'CBD Tower Complex',
-      company: null,
-      join_date: '2023-05-10',
-      manager_id: 'USR005',
-      manager_name: 'Carol Smith',
-      status: 'ACTIVE',
-      roles: [
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2023-05-10T08:00:00Z',
-      updated_at: '2024-01-20T08:00:00Z',
-      last_login_at: '2024-01-19T16:45:00Z'
-    },
-    {
-      id: 'USR005',
-      employee_id: 'MGR002',
-      email: 'carol.smith@goldtech.com',
-      full_name: 'Carol Smith',
-      phone: '+65 9567 8901',
-      position: 'Design Manager',
-      department: 'Design',
-      project_site: 'CBD Tower Complex',
-      company: null,
-      join_date: '2022-08-15',
-      manager_id: 'USR006',
-      manager_name: 'Admin User',
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' },
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2022-08-15T08:00:00Z',
-      updated_at: '2024-02-05T08:00:00Z',
-      last_login_at: '2024-01-20T07:30:00Z'
-    },
-    {
-      id: 'USR006',
-      employee_id: null,
-      email: 'admin@goldtech.com',
-      full_name: 'Admin User',
-      phone: '+65 9678 9012',
-      position: 'System Administrator',
-      department: 'Administration',
-      project_site: null,
-      company: 'GoldTech Resources',
-      join_date: '2021-01-01',
-      manager_id: null,
-      manager_name: null,
-      status: 'ACTIVE',
-      roles: [
-        { id: 1, name: 'admin', description: 'Administrator' }
-      ],
-      created_at: '2021-01-01T08:00:00Z',
-      updated_at: '2024-01-01T08:00:00Z',
-      last_login_at: '2024-01-20T08:00:00Z'
-    },
-    {
-      id: 'USR007',
-      employee_id: null,
-      email: 'client.manager@externalsystem.com',
-      full_name: 'External Client Manager',
-      phone: '+65 9789 0123',
-      position: 'Client Project Manager',
-      department: 'External Relations',
-      project_site: 'Punggol Smart City',
-      company: 'External Systems Pte Ltd',
-      join_date: '2023-06-01',
-      manager_id: null,
-      manager_name: null,
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' }
-      ],
-      created_at: '2023-06-01T08:00:00Z',
-      updated_at: '2024-01-10T08:00:00Z',
-      last_login_at: '2024-01-18T10:15:00Z'
-    },
-    {
-      id: 'USR008',
-      employee_id: 'MGR003',
-      email: 'bob.chen@goldtech.com',
-      full_name: 'Bob Chen',
-      phone: '+65 9890 1234',
-      position: 'Technical Lead',
-      department: 'Development',
-      project_site: 'Orchard Road Development',
-      company: null,
-      join_date: '2022-04-12',
-      manager_id: 'USR006',
-      manager_name: 'Admin User',
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' },
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2022-04-12T08:00:00Z',
-      updated_at: '2024-01-12T08:00:00Z',
-      last_login_at: '2024-01-19T11:20:00Z'
-    },
-    {
-      id: 'USR009',
-      employee_id: 'MGR004',
-      email: 'david.johnson@goldtech.com',
-      full_name: 'David Lee Johnson',
-      phone: '+65 9901 2345',
-      position: 'Operations Manager',
-      department: 'Operations',
-      project_site: 'Changi Airport Expansion',
-      company: null,
-      join_date: '2022-09-20',
-      manager_id: 'USR006',
-      manager_name: 'Admin User',
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' }
-      ],
-      created_at: '2022-09-20T08:00:00Z',
-      updated_at: '2024-01-15T08:00:00Z',
-      last_login_at: '2024-01-18T15:30:00Z'
-    },
-    {
-      id: 'USR010',
-      employee_id: 'MGR005',
-      email: 'emily.wong@goldtech.com',
-      full_name: 'Emily Wong',
-      phone: '+65 9012 3456',
-      position: 'HR Manager',
-      department: 'Human Resources',
-      project_site: null,
-      company: null,
-      join_date: '2021-11-08',
-      manager_id: 'USR006',
-      manager_name: 'Admin User',
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' }
-      ],
-      created_at: '2021-11-08T08:00:00Z',
-      updated_at: '2024-01-08T08:00:00Z',
-      last_login_at: '2024-01-19T09:45:00Z'
-    },
-    {
-      id: 'USR011',
-      employee_id: 'MGR006',
-      email: 'johnson.martinez@goldtech.com',
-      full_name: 'Johnson Martinez',
-      phone: '+65 9123 4567',
-      position: 'Finance Manager',
-      department: 'Finance',
-      project_site: null,
-      company: null,
-      join_date: '2022-01-15',
-      manager_id: 'USR006',
-      manager_name: 'Admin User',
-      status: 'ACTIVE',
-      roles: [
-        { id: 2, name: 'manager', description: 'Manager' }
-      ],
-      created_at: '2022-01-15T08:00:00Z',
-      updated_at: '2024-01-16T08:00:00Z',
-      last_login_at: '2024-01-17T13:15:00Z'
-    },
-    {
-      id: 'USR012',
-      employee_id: 'GT005',
-      email: 'sarah.wilson@goldtech.com',
-      full_name: 'Sarah Wilson',
-      phone: '+65 9234 5678',
-      position: 'Junior Developer',
-      department: 'Development',
-      project_site: 'Marina Bay Project',
-      company: null,
-      join_date: '2023-07-10',
-      manager_id: 'USR008',
-      manager_name: 'Bob Chen',
-      status: 'ACTIVE',
-      roles: [
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2023-07-10T08:00:00Z',
-      updated_at: '2024-01-18T08:00:00Z',
-      last_login_at: '2024-01-19T14:20:00Z'
-    },
-    {
-      id: 'USR013',
-      employee_id: 'GT006',
-      email: 'mark.thompson@goldtech.com',
-      full_name: 'Mark Thompson',
-      phone: '+65 9345 6789',
-      position: 'Business Analyst',
-      department: 'Business Analysis',
-      project_site: 'CBD Tower Complex',
-      company: null,
-      join_date: '2023-04-15',
-      manager_id: 'USR005',
-      manager_name: 'Carol Smith',
-      status: 'ACTIVE',
-      roles: [
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2023-04-15T08:00:00Z',
-      updated_at: '2024-01-17T08:00:00Z',
-      last_login_at: '2024-01-18T10:30:00Z'
-    },
-    {
-      id: 'USR014',
-      employee_id: 'GT007',
-      email: 'lisa.garcia@goldtech.com',
-      full_name: 'Lisa Garcia',
-      phone: '+65 9456 7890',
-      position: 'DevOps Engineer',
-      department: 'DevOps',
-      project_site: 'Orchard Road Development',
-      company: null,
-      join_date: '2023-08-20',
-      manager_id: 'USR008',
-      manager_name: 'Bob Chen',
-      status: 'ACTIVE',
-      roles: [
-        { id: 3, name: 'employee', description: 'Employee' }
-      ],
-      created_at: '2023-08-20T08:00:00Z',
-      updated_at: '2024-01-19T08:00:00Z',
-      last_login_at: '2024-01-20T11:15:00Z'
-    }
-  ];
-};

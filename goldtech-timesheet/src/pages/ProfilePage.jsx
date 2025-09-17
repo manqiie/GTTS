@@ -1,4 +1,4 @@
-// src/pages/ProfilePage.jsx - Simplified without work info card and avatar
+// src/pages/ProfilePage.jsx - Updated to use real API data
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -13,7 +13,8 @@ import {
   Input,
   Row,
   Col,
-  Divider
+  Divider,
+  Spin
 } from 'antd';
 import { 
   EditOutlined, 
@@ -24,32 +25,39 @@ import {
   CalendarOutlined,
   SaveOutlined,
   KeyOutlined,
-  LockOutlined
+  LockOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PageHeader from '../components/Common/PageHeader';
 import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
 
 function ProfilePage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, refreshUser } = useAuth();
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
 
   if (!user) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Text>Please log in to view your profile.</Text>
+        <Spin size="large" />
+        <div style={{ marginTop: 16 }}>
+          <Text>Loading profile...</Text>
+        </div>
       </div>
     );
   }
 
   const handleEditProfile = () => {
     form.setFieldsValue({
-      name: user.name,
+      fullName: user.fullName || user.name,
       email: user.email,
       phone: user.phone,
       position: user.position,
@@ -59,42 +67,87 @@ function ProfilePage() {
   };
 
   const handleSaveProfile = async (values) => {
+    setUpdateLoading(true);
     try {
-      updateProfile(values);
-      message.success('Profile updated successfully');
-      setEditModalVisible(false);
+      // Create update object with only the fields that can be updated
+      const updateData = {
+        fullName: values.fullName,
+        phone: values.phone
+        // Note: position, department, email typically can't be updated by user
+        // These would require admin privileges
+      };
+
+      const result = await updateProfile(updateData);
+      
+      if (result.success) {
+        message.success('Profile updated successfully');
+        setEditModalVisible(false);
+        await refreshUser(); // Refresh user data from server
+      } else {
+        message.error(result.error || 'Failed to update profile');
+      }
     } catch (error) {
+      console.error('Profile update error:', error);
       message.error('Failed to update profile');
+    } finally {
+      setUpdateLoading(false);
     }
   };
 
   const handleChangePassword = async (values) => {
+    setPasswordLoading(true);
     try {
-      // In real implementation, this would call the backend API
-      // await changePassword(values);
-      
-      message.success('Password changed successfully');
-      setPasswordModalVisible(false);
-      passwordForm.resetFields();
+      // Call password change API
+      const response = await apiService.patch(`/users/${user.id}/reset-password`, {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword
+      });
+
+      if (response.success) {
+        message.success('Password changed successfully');
+        setPasswordModalVisible(false);
+        passwordForm.resetFields();
+      } else {
+        message.error(response.message || 'Failed to change password');
+      }
     } catch (error) {
-      message.error('Failed to change password');
+      console.error('Password change error:', error);
+      message.error('Failed to change password: ' + error.message);
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
-  const getRoleDisplay = (role) => {
-    const roleConfig = {
-      employee: { color: 'blue', text: 'Employee' },
-      manager: { color: 'orange', text: 'Manager' },
-      admin: { color: 'red', text: 'Administrator' }
-    };
-    return roleConfig[role] || { color: 'default', text: role };
+  const getRoleDisplay = () => {
+    if (!user.roles || user.roles.length === 0) {
+      return [{ color: 'default', text: 'Employee' }];
+    }
+
+    return user.roles.map(role => {
+      const roleConfig = {
+        employee: { color: 'blue', text: 'Employee' },
+        manager: { color: 'orange', text: 'Manager' },
+        admin: { color: 'red', text: 'Administrator' }
+      };
+      return roleConfig[role.name] || { color: 'default', text: role.description || role.name };
+    });
   };
 
   const getStatusColor = (status) => {
-    return status === 'active' ? 'green' : 'red';
+    if (typeof status === 'string') {
+      return status.toLowerCase() === 'active' ? 'green' : 'red';
+    }
+    return status === 'ACTIVE' ? 'green' : 'red';
   };
 
-  const roleDisplay = getRoleDisplay(user.role);
+  const getStatusText = (status) => {
+    if (typeof status === 'string') {
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    }
+    return status === 'ACTIVE' ? 'Active' : 'Inactive';
+  };
+
+  const roleDisplays = getRoleDisplay();
 
   const breadcrumbs = [
     { title: 'My Profile' }
@@ -114,7 +167,13 @@ function ProfilePage() {
             >
               Change Password
             </Button>
-          
+            <Button 
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={handleEditProfile}
+            >
+              Edit Profile
+            </Button>
           </Space>
         }
       />
@@ -123,20 +182,42 @@ function ProfilePage() {
       <Card>
         {/* Profile Header */}
         <div style={{ marginBottom: 24 }}>
-          <Title level={3} style={{ margin: 0, marginBottom: 8 }}>
-            {user.name}
-          </Title>
-          <Space size="middle">
-            <Text strong style={{ color: '#666' }}>
-              {user.position}
-            </Text>
-            <Tag color={roleDisplay.color}>
-              {roleDisplay.text}
-            </Tag>
-            <Tag color={getStatusColor(user.status)}>
-              {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-            </Tag>
-          </Space>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ marginRight: 16 }}>
+              <div style={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #4f63d2, #b39f65)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '32px',
+                fontWeight: 'bold'
+              }}>
+                {(user.fullName || user.name || 'U').charAt(0).toUpperCase()}
+              </div>
+            </div>
+            <div>
+              <Title level={3} style={{ margin: 0, marginBottom: 8 }}>
+                {user.fullName || user.name}
+              </Title>
+              <Space size="middle" wrap>
+                <Text strong style={{ color: '#666' }}>
+                  {user.position}
+                </Text>
+                {roleDisplays.map((roleDisplay, index) => (
+                  <Tag key={index} color={roleDisplay.color}>
+                    {roleDisplay.text}
+                  </Tag>
+                ))}
+                <Tag color={getStatusColor(user.status)}>
+                  {getStatusText(user.status)}
+                </Tag>
+              </Space>
+            </div>
+          </div>
         </div>
 
         <Divider />
@@ -146,24 +227,25 @@ function ProfilePage() {
           {/* Personal Information Column */}
           <Col xs={24} lg={12}>
             <Title level={4} style={{ marginBottom: 20, color: '#1890ff' }}>
+              <UserOutlined style={{ marginRight: 8 }} />
               Personal Information
             </Title>
             
             <Descriptions column={1} size="middle" labelStyle={{ fontWeight: 'bold', width: '140px' }}>
               <Descriptions.Item label="Employee ID">
-                <Text strong>{user.employeeId}</Text>
+                <Text strong>{user.employeeId || 'N/A'}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Full Name">
-                {user.name}
+                {user.fullName || user.name}
               </Descriptions.Item>
               <Descriptions.Item label={<Space><MailOutlined />Email</Space>}>
                 {user.email}
               </Descriptions.Item>
               <Descriptions.Item label={<Space><PhoneOutlined />Phone</Space>}>
-                {user.phone}
+                {user.phone || 'Not provided'}
               </Descriptions.Item>
               <Descriptions.Item label={<Space><CalendarOutlined />Join Date</Space>}>
-                {dayjs(user.joinDate).format('MMMM DD, YYYY')}
+                {user.joinDate ? dayjs(user.joinDate).format('MMMM DD, YYYY') : 'N/A'}
               </Descriptions.Item>
             </Descriptions>
           </Col>
@@ -171,36 +253,130 @@ function ProfilePage() {
           {/* Work Information Column */}
           <Col xs={24} lg={12}>
             <Title level={4} style={{ marginBottom: 20, color: '#52c41a' }}>
+              <BankOutlined style={{ marginRight: 8 }} />
               Work Information
             </Title>
             
             <Descriptions column={1} size="middle" labelStyle={{ fontWeight: 'bold', width: '140px' }}>
               <Descriptions.Item label="Position">
-                {user.position}
+                {user.position || 'N/A'}
               </Descriptions.Item>
-              <Descriptions.Item label={<Space><BankOutlined />Department</Space>}>
-                {user.department}
+              <Descriptions.Item label="Department">
+                {user.department || 'N/A'}
               </Descriptions.Item>
               <Descriptions.Item label="Project Site">
-                {user.projectSite}
+                {user.projectSite || 'Not assigned'}
               </Descriptions.Item>
               <Descriptions.Item label={<Space><TeamOutlined />Manager</Space>}>
-                {user.managerName}
+                {user.managerName || 'Not assigned'}
               </Descriptions.Item>
-              <Descriptions.Item label="Role">
-                <Tag color={roleDisplay.color}>
-                  {roleDisplay.text}
-                </Tag>
+              <Descriptions.Item label="Company">
+                {user.company || 'GoldTech Resources'}
               </Descriptions.Item>
             </Descriptions>
           </Col>
         </Row>
 
-        <Divider />
-
-    
+        {user.lastLoginAt && (
+          <>
+            <Divider />
+            <div style={{ textAlign: 'center', color: '#999', fontSize: '12px' }}>
+              Last login: {dayjs(user.lastLoginAt).format('MMMM DD, YYYY HH:mm')}
+            </div>
+          </>
+        )}
       </Card>
 
+      {/* Edit Profile Modal */}
+      <Modal
+        title="Edit Profile"
+        open={editModalVisible}
+        onCancel={() => {
+          setEditModalVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSaveProfile}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Full Name"
+                name="fullName"
+                rules={[
+                  { required: true, message: 'Please enter your full name' },
+                  { min: 2, message: 'Name must be at least 2 characters' }
+                ]}
+              >
+                <Input prefix={<UserOutlined />} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Phone Number"
+                name="phone"
+                rules={[
+                  { pattern: /^\+65\s\d{4}\s\d{4}$/, message: 'Please use Singapore format: +65 1234 5678' }
+                ]}
+              >
+                <Input prefix={<PhoneOutlined />} placeholder="+65 9123 4567" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                label="Email"
+                name="email"
+              >
+                <Input 
+                  prefix={<MailOutlined />} 
+                  disabled
+                  style={{ color: '#666' }}
+                  title="Email cannot be changed. Contact administrator if needed."
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <div style={{ 
+            background: '#f8f9fa', 
+            padding: '12px', 
+            borderRadius: '4px', 
+            marginBottom: '16px',
+            fontSize: '13px',
+            color: '#666'
+          }}>
+            <strong>Note:</strong> Work information (position, department, etc.) can only be updated by administrators. 
+            Contact your HR department or system administrator if changes are needed.
+          </div>
+
+          <div style={{ textAlign: 'right', marginTop: 24 }}>
+            <Space>
+              <Button onClick={() => {
+                setEditModalVisible(false);
+                form.resetFields();
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                icon={<SaveOutlined />}
+                loading={updateLoading}
+              >
+                Save Changes
+              </Button>
+            </Space>
+          </div>
+        </Form>
+      </Modal>
 
       {/* Change Password Modal */}
       <Modal
@@ -264,7 +440,12 @@ function ProfilePage() {
               }}>
                 Cancel
               </Button>
-              <Button type="primary" htmlType="submit" icon={<KeyOutlined />}>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                icon={<KeyOutlined />}
+                loading={passwordLoading}
+              >
                 Change Password
               </Button>
             </Space>

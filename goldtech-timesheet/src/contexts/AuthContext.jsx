@@ -1,4 +1,4 @@
-// AuthContext.jsx - Updated for Backend Integration
+// AuthContext.jsx - Updated for Real Backend Integration
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -39,7 +39,9 @@ export const AuthProvider = ({ children }) => {
         if (response.ok) {
           const data = await response.json();
           if (data.valid && data.user) {
-            setUser(data.user);
+            // Transform backend user data to frontend format
+            const transformedUser = transformUserData(data.user);
+            setUser(transformedUser);
           } else {
             // Token invalid, remove it
             localStorage.removeItem('authToken');
@@ -73,10 +75,11 @@ export const AuthProvider = ({ children }) => {
         // Store token
         localStorage.setItem('authToken', data.token);
         
-        // Set user data
-        setUser(data.user);
+        // Transform and set user data
+        const transformedUser = transformUserData(data.user);
+        setUser(transformedUser);
         
-        return { success: true, user: data.user };
+        return { success: true, user: transformedUser };
       } else {
         return { success: false, error: data.message || 'Login failed' };
       }
@@ -117,12 +120,28 @@ export const AuthProvider = ({ children }) => {
         throw new Error('No authentication token found');
       }
 
-      // For now, just update local state
-      // In the future, you can add a backend API call here
-      const updatedUser = { ...user, ...updatedData };
-      setUser(updatedUser);
-      
-      return { success: true };
+      // Update user profile via API
+      const response = await fetch(`${API_BASE_URL}/users/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const transformedUser = transformUserData(result.data);
+          setUser(transformedUser);
+          return { success: true };
+        } else {
+          return { success: false, error: result.message };
+        }
+      } else {
+        return { success: false, error: 'Failed to update profile' };
+      }
     } catch (error) {
       console.error('Profile update error:', error);
       return { success: false, error: error.message };
@@ -147,11 +166,37 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        const transformedUser = transformUserData(userData);
+        setUser(transformedUser);
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
     }
+  };
+
+  // Transform backend user data to frontend format
+  const transformUserData = (backendUser) => {
+    return {
+      id: backendUser.id,
+      employeeId: backendUser.employeeId,
+      name: backendUser.fullName || backendUser.name,
+      fullName: backendUser.fullName,
+      email: backendUser.email,
+      phone: backendUser.phone,
+      position: backendUser.position,
+      department: backendUser.department,
+      projectSite: backendUser.projectSite,
+      company: backendUser.company,
+      joinDate: backendUser.joinDate,
+      managerName: backendUser.managerName,
+      status: backendUser.status?.toLowerCase() || 'active',
+      roles: backendUser.roles || [],
+      role: backendUser.role || (backendUser.roles?.[0]?.name) || 'employee',
+      permissions: backendUser.permissions || [],
+      lastLoginAt: backendUser.lastLoginAt,
+      createdAt: backendUser.createdAt,
+      updatedAt: backendUser.updatedAt
+    };
   };
 
   const value = {

@@ -1,8 +1,9 @@
-// EmployeeForm.jsx - Updated with textboxes for work info and manager search
+// EmployeeForm.jsx - Updated with real API integration
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import apiService from '../../services/apiService';
 
 const { TextArea } = Input;
 const { Title } = Typography;
@@ -18,6 +19,8 @@ function EmployeeForm({
   const [availableRoles, setAvailableRoles] = useState([]);
   const [managerOptions, setManagerOptions] = useState([]);
   const [managerSearchValue, setManagerSearchValue] = useState('');
+  const [loadingManagers, setLoadingManagers] = useState(false);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
   // Load roles and managers on component mount
   useEffect(() => {
@@ -40,28 +43,56 @@ function EmployeeForm({
     }
   }, [initialValues, availableManagers]);
 
-  const loadRoles = () => {
-    // In real implementation, this would be an API call
-    const roles = [
-      { id: 1, name: 'admin', description: 'Administrator' },
-      { id: 2, name: 'manager', description: 'Manager' },
-      { id: 3, name: 'employee', description: 'Employee' }
-    ];
-    setAvailableRoles(roles);
+  const loadRoles = async () => {
+    setLoadingRoles(true);
+    try {
+      const response = await apiService.getRoles();
+      if (response.success && response.data) {
+        setAvailableRoles(response.data);
+      } else {
+        console.error('Failed to load roles:', response.message);
+        // Fallback to default roles
+        setAvailableRoles([
+          { id: 1, name: 'admin', description: 'Administrator' },
+          { id: 2, name: 'manager', description: 'Manager' },
+          { id: 3, name: 'employee', description: 'Employee' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      // Fallback to default roles
+      setAvailableRoles([
+        { id: 1, name: 'admin', description: 'Administrator' },
+        { id: 2, name: 'manager', description: 'Manager' },
+        { id: 3, name: 'employee', description: 'Employee' }
+      ]);
+    } finally {
+      setLoadingRoles(false);
+    }
   };
 
-  const loadManagers = () => {
-    // In real implementation, this would fetch users with manager role
-    const managers = [
-      { id: 'USR002', full_name: 'Alice Johnson', employee_id: 'MGR001' },
-      { id: 'USR005', full_name: 'Carol Smith', employee_id: 'MGR002' },
-      { id: 'USR006', full_name: 'Admin User', employee_id: null },
-      { id: 'USR008', full_name: 'Bob Chen', employee_id: 'MGR003' },
-      { id: 'USR009', full_name: 'David Lee Johnson', employee_id: 'MGR004' },
-      { id: 'USR010', full_name: 'Emily Wong', employee_id: 'MGR005' },
-      { id: 'USR011', full_name: 'Johnson Martinez', employee_id: 'MGR006' }
-    ];
-    setAvailableManagers(managers);
+  const loadManagers = async () => {
+    setLoadingManagers(true);
+    try {
+      const response = await apiService.getManagers();
+      if (response.success && response.data) {
+        // Transform backend data to expected format
+        const managers = response.data.map(manager => ({
+          id: manager.id,
+          full_name: manager.fullName || manager.full_name,
+          employee_id: manager.employeeId || manager.employee_id
+        }));
+        setAvailableManagers(managers);
+      } else {
+        console.error('Failed to load managers:', response.message);
+        setAvailableManagers([]);
+      }
+    } catch (error) {
+      console.error('Error loading managers:', error);
+      setAvailableManagers([]);
+    } finally {
+      setLoadingManagers(false);
+    }
   };
 
   const filterManagerOptions = (searchText) => {
@@ -243,6 +274,7 @@ function EmployeeForm({
               <Select
                 mode="multiple"
                 placeholder="Select user roles"
+                loading={loadingRoles}
                 options={availableRoles.map(role => ({
                   label: `${role.description} (${role.name})`,
                   value: role.id
@@ -318,7 +350,9 @@ function EmployeeForm({
                 onSearch={handleManagerSearch}
                 placeholder="Type manager name to search..."
                 allowClear
+                loading={loadingManagers}
                 notFoundContent={
+                  loadingManagers ? 'Loading...' :
                   managerSearchValue ? 
                   <span style={{ color: '#ff4d4f' }}>Manager doesn't exist</span> : 
                   <span style={{ color: '#999' }}>Start typing to search managers</span>

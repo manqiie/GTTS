@@ -1,11 +1,10 @@
-// EmployeeForm.jsx - Updated with real API integration
+// EmployeeForm.jsx - Clean and simple version with text inputs
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import apiService from '../../services/apiService';
 
-const { TextArea } = Input;
 const { Title } = Typography;
 
 function EmployeeForm({ 
@@ -15,33 +14,33 @@ function EmployeeForm({
   submitButton,
   disabled = false 
 }) {
-  const [availableManagers, setAvailableManagers] = useState([]);
+  const [availableSupervisors, setAvailableSupervisors] = useState([]);
   const [availableRoles, setAvailableRoles] = useState([]);
-  const [managerOptions, setManagerOptions] = useState([]);
-  const [managerSearchValue, setManagerSearchValue] = useState('');
-  const [loadingManagers, setLoadingManagers] = useState(false);
+  const [supervisorOptions, setSupervisorOptions] = useState([]);
+  const [supervisorSearchValue, setSupervisorSearchValue] = useState('');
+  const [loadingSupervisors, setLoadingSupervisors] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
 
-  // Load roles and managers on component mount
+  // Load roles and supervisors on component mount
   useEffect(() => {
     loadRoles();
-    loadManagers();
+    loadSupervisors();
   }, []);
 
-  // Update manager options when search value changes
+  // Update supervisor options when search value changes
   useEffect(() => {
-    filterManagerOptions(managerSearchValue);
-  }, [managerSearchValue, availableManagers]);
+    filterSupervisorOptions(supervisorSearchValue);
+  }, [supervisorSearchValue, availableSupervisors]);
 
-  // Set initial manager search value when editing
+  // Set initial supervisor search value when editing
   useEffect(() => {
-    if (initialValues && initialValues.manager_id) {
-      const manager = availableManagers.find(m => m.id === initialValues.manager_id);
-      if (manager) {
-        setManagerSearchValue(`${manager.full_name} (${manager.employee_id || 'No ID'})`);
+    if (initialValues && initialValues.supervisor_id) {
+      const supervisor = availableSupervisors.find(s => s.id === initialValues.supervisor_id);
+      if (supervisor) {
+        setSupervisorSearchValue(`${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`);
       }
     }
-  }, [initialValues, availableManagers]);
+  }, [initialValues, availableSupervisors]);
 
   const loadRoles = async () => {
     setLoadingRoles(true);
@@ -54,16 +53,15 @@ function EmployeeForm({
         // Fallback to default roles
         setAvailableRoles([
           { id: 1, name: 'admin', description: 'Administrator' },
-          { id: 2, name: 'manager', description: 'Manager' },
+          { id: 2, name: 'supervisor', description: 'Supervisor' },
           { id: 3, name: 'employee', description: 'Employee' }
         ]);
       }
     } catch (error) {
       console.error('Error loading roles:', error);
-      // Fallback to default roles
       setAvailableRoles([
         { id: 1, name: 'admin', description: 'Administrator' },
-        { id: 2, name: 'manager', description: 'Manager' },
+        { id: 2, name: 'supervisor', description: 'Supervisor' },
         { id: 3, name: 'employee', description: 'Employee' }
       ]);
     } finally {
@@ -71,88 +69,86 @@ function EmployeeForm({
     }
   };
 
-  const loadManagers = async () => {
-    setLoadingManagers(true);
+  const loadSupervisors = async () => {
+    setLoadingSupervisors(true);
     try {
-      const response = await apiService.getManagers();
+      const response = await apiService.getSupervisors();
       if (response.success && response.data) {
-        // Transform backend data to expected format
-        const managers = response.data.map(manager => ({
-          id: manager.id,
-          full_name: manager.fullName || manager.full_name,
-          employee_id: manager.employeeId || manager.employee_id
+        const supervisors = response.data.map(supervisor => ({
+          id: supervisor.id,
+          full_name: supervisor.fullName || supervisor.full_name,
+          employee_id: supervisor.employeeId || supervisor.employee_id
         }));
-        setAvailableManagers(managers);
+        setAvailableSupervisors(supervisors);
       } else {
-        console.error('Failed to load managers:', response.message);
-        setAvailableManagers([]);
+        console.error('Failed to load supervisors:', response.message);
+        setAvailableSupervisors([]);
       }
     } catch (error) {
-      console.error('Error loading managers:', error);
-      setAvailableManagers([]);
+      console.error('Error loading supervisors:', error);
+      setAvailableSupervisors([]);
     } finally {
-      setLoadingManagers(false);
+      setLoadingSupervisors(false);
     }
   };
 
-  const filterManagerOptions = (searchText) => {
+  const filterSupervisorOptions = (searchText) => {
     if (!searchText) {
-      setManagerOptions([]);
+      setSupervisorOptions([]);
       return;
     }
 
-    const filtered = availableManagers.filter(manager => {
-      const fullName = manager.full_name.toLowerCase();
-      const employeeId = (manager.employee_id || '').toLowerCase();
+    const filtered = availableSupervisors.filter(supervisor => {
+      const fullName = supervisor.full_name.toLowerCase();
+      const employeeId = (supervisor.employee_id || '').toLowerCase();
       const search = searchText.toLowerCase();
       
       return fullName.includes(search) || employeeId.includes(search);
     });
 
     if (filtered.length === 0) {
-      setManagerOptions([
+      setSupervisorOptions([
         { 
           value: '', 
-          label: <span style={{ color: '#ff4d4f' }}>Manager doesn't exist</span>,
+          label: <span style={{ color: '#ff4d4f' }}>Supervisor doesn't exist</span>,
           disabled: true 
         }
       ]);
     } else {
-      setManagerOptions(filtered.map(manager => ({
-        value: `${manager.full_name} (${manager.employee_id || 'No ID'})`,
+      setSupervisorOptions(filtered.map(supervisor => ({
+        value: `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`,
         label: (
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
             <div>
-              <div style={{ fontWeight: 500 }}>{manager.full_name}</div>
+              <div style={{ fontWeight: 500 }}>{supervisor.full_name}</div>
               <div style={{ fontSize: '12px', color: '#666' }}>
-                ID: {manager.employee_id || 'No Employee ID'}
+                ID: {supervisor.employee_id || 'No Employee ID'}
               </div>
             </div>
           </div>
         ),
-        managerId: manager.id
+        supervisorId: supervisor.id
       })));
     }
   };
 
-  const handleManagerSelect = (value, option) => {
-    if (option && option.managerId) {
-      form.setFieldValue('manager_id', option.managerId);
-      setManagerSearchValue(value);
+  const handleSupervisorSelect = (value, option) => {
+    if (option && option.supervisorId) {
+      form.setFieldValue('supervisor_id', option.supervisorId);
+      setSupervisorSearchValue(value);
     }
   };
 
-  const handleManagerSearch = (value) => {
-    setManagerSearchValue(value);
+  const handleSupervisorSearch = (value) => {
+    setSupervisorSearchValue(value);
     
-    // Clear manager_id if the search doesn't match any existing manager
-    const matchedManager = availableManagers.find(manager => 
-      `${manager.full_name} (${manager.employee_id || 'No ID'})` === value
+    const matchedSupervisor = availableSupervisors.find(supervisor => 
+      `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})` === value
     );
     
-    if (!matchedManager) {
-      form.setFieldValue('manager_id', null);
+    if (!matchedSupervisor) {
+      form.setFieldValue('supervisor_id', null);
     }
   };
 
@@ -173,9 +169,9 @@ function EmployeeForm({
             <Form.Item
               label="Employee ID"
               name="employee_id"
-              help="Leave empty for managers/admins if they don't need employee ID"
+              help="Leave empty for supervisors/admins if they don't need employee ID"
             >
-              <Input placeholder="GT001 (optional for managers)" />
+              <Input placeholder="GT001 (optional for supervisors)" />
             </Form.Item>
           </Col>
           
@@ -191,6 +187,8 @@ function EmployeeForm({
               <Input placeholder="John Smith" />
             </Form.Item>
           </Col>
+
+
         </Row>
 
         <Row gutter={24}>
@@ -257,14 +255,9 @@ function EmployeeForm({
             </Col>
           </Row>
         )}
-      </Card>
 
-      {/* Role Assignment */}
-      <Card size="small" style={{ marginBottom: 24 }}>
-        <Title level={5} style={{ marginBottom: 16 }}>Role Assignment</Title>
-        
         <Row gutter={24}>
-          <Col xs={24}>
+          <Col xs={24} md={24}>
             <Form.Item
               label="User Roles"
               name="roles"
@@ -287,6 +280,7 @@ function EmployeeForm({
             </Form.Item>
           </Col>
         </Row>
+
       </Card>
 
       {/* Work Information */}
@@ -300,7 +294,7 @@ function EmployeeForm({
               name="position"
               rules={[{ required: true, message: 'Please input position!' }]}
             >
-              <Input placeholder="e.g. Senior Developer, Project Manager, QA Engineer" />
+              <Input placeholder="e.g. Senior Developer, Project Supervisor, QA Engineer" />
             </Form.Item>
           </Col>
           
@@ -327,47 +321,6 @@ function EmployeeForm({
           
           <Col xs={24} md={12}>
             <Form.Item
-              label="Company"
-              name="company"
-              help="For client managers or external users"
-            >
-              <Input placeholder="Company name (if applicable)" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="Manager"
-              name="manager_search"
-              help="Type to search for manager by name or ID"
-            >
-              <AutoComplete
-                value={managerSearchValue}
-                options={managerOptions}
-                onSelect={handleManagerSelect}
-                onSearch={handleManagerSearch}
-                placeholder="Type manager name to search..."
-                allowClear
-                loading={loadingManagers}
-                notFoundContent={
-                  loadingManagers ? 'Loading...' :
-                  managerSearchValue ? 
-                  <span style={{ color: '#ff4d4f' }}>Manager doesn't exist</span> : 
-                  <span style={{ color: '#999' }}>Start typing to search managers</span>
-                }
-              />
-            </Form.Item>
-            
-            {/* Hidden field to store actual manager_id */}
-            <Form.Item name="manager_id" hidden>
-              <Input type="hidden" />
-            </Form.Item>
-          </Col>
-          
-          <Col xs={24} md={12}>
-            <Form.Item
               label="Join Date"
               name="join_date"
               rules={[{ required: true, message: 'Please select join date!' }]}
@@ -381,8 +334,37 @@ function EmployeeForm({
           </Col>
         </Row>
 
-        {initialValues && (
-          <Row gutter={24}>
+        <Row gutter={24}>
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Supervisor"
+              name="supervisor_search"
+              help="Type to search for supervisor by name or ID"
+            >
+              <AutoComplete
+                value={supervisorSearchValue}
+                options={supervisorOptions}
+                onSelect={handleSupervisorSelect}
+                onSearch={handleSupervisorSearch}
+                placeholder="Type supervisor name to search..."
+                allowClear
+                loading={loadingSupervisors}
+                notFoundContent={
+                  loadingSupervisors ? 'Loading...' :
+                  supervisorSearchValue ? 
+                  <span style={{ color: '#ff4d4f' }}>Supervisor doesn't exist</span> : 
+                  <span style={{ color: '#999' }}>Start typing to search supervisors</span>
+                }
+              />
+            </Form.Item>
+            
+            {/* Hidden field to store actual supervisor_id */}
+            <Form.Item name="supervisor_id" hidden>
+              <Input type="hidden" />
+            </Form.Item>
+          </Col>
+
+          {initialValues && (
             <Col xs={24} md={12}>
               <Form.Item
                 label="Status"
@@ -396,8 +378,8 @@ function EmployeeForm({
                 />
               </Form.Item>
             </Col>
-          </Row>
-        )}
+          )}
+        </Row>
       </Card>
 
       {submitButton && (

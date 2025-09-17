@@ -1,4 +1,4 @@
-// src/services/apiService.js - Centralized API service for user management
+// src/services/apiService.js - Updated with supervisor changes and hierarchical filtering
 const API_BASE_URL = 'http://localhost:8080/api';
 
 class ApiService {
@@ -125,9 +125,14 @@ class ApiService {
     return this.patch(`/users/${id}/status`);
   }
 
-  // Get managers for dropdown
-  async getManagers() {
-    return this.get('/users/managers');
+  // Get supervisors for dropdown (changed from getManagers)
+  async getSupervisors() {
+    return this.get('/users/supervisors');
+  }
+
+  // Get supervisors by project site
+  async getSupervisorsByProjectSite(projectSite) {
+    return this.get('/users/supervisors', { projectSite });
   }
 
   // Get roles for dropdown
@@ -150,6 +155,49 @@ class ApiService {
     return this.patch(`/users/${id}/reset-password`, { newPassword });
   }
 
+  // Hierarchical filtering methods
+
+  // Get all project sites
+  async getProjectSites() {
+    return this.get('/users/filter-options/project-sites');
+  }
+
+  // Get all departments
+  async getAllDepartments() {
+    return this.get('/users/filter-options/departments');
+  }
+
+  // Get departments by project site
+  async getDepartmentsByProjectSite(projectSite) {
+    return this.get('/users/filter-options/departments', { projectSite });
+  }
+
+  // Get all positions
+  async getAllPositions() {
+    return this.get('/users/filter-options/positions');
+  }
+
+  // Get positions by project site and department
+  async getPositionsByFilters(projectSite = null, department = null) {
+    const params = {};
+    if (projectSite) params.projectSite = projectSite;
+    if (department) params.department = department;
+    return this.get('/users/filter-options/positions', params);
+  }
+
+  // Get roles by project site
+  async getRolesByProjectSite(projectSite) {
+    return this.get('/users/filter-options/roles', { projectSite });
+  }
+
+  // Get roles by project site and department
+  async getRolesByFilters(projectSite = null, department = null) {
+    const params = {};
+    if (projectSite) params.projectSite = projectSite;
+    if (department) params.department = department;
+    return this.get('/users/filter-options/roles', params);
+  }
+
   // Transform backend user data to frontend format
   transformUserData(backendUser) {
     return {
@@ -161,9 +209,8 @@ class ApiService {
       position: backendUser.position,
       department: backendUser.department,
       project_site: backendUser.projectSite,
-      company: backendUser.company,
       join_date: backendUser.joinDate,
-      manager_name: backendUser.managerName,
+      supervisor_name: backendUser.supervisorName, // Changed from managerName
       status: backendUser.status,
       roles: backendUser.roles || [],
       created_at: backendUser.createdAt,
@@ -182,9 +229,8 @@ class ApiService {
       position: frontendUser.position,
       department: frontendUser.department,
       projectSite: frontendUser.project_site || null,
-      company: frontendUser.company || null,
       joinDate: frontendUser.join_date,
-      managerId: frontendUser.manager_id || null,
+      supervisorId: frontendUser.supervisor_id || null, // Changed from managerId
       roles: frontendUser.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
       status: frontendUser.status
     };

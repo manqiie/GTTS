@@ -389,8 +389,8 @@ function DayEntryModal({
           </Form.Item>
         )}
 
-        <Form.Item label="Notes (Optional)" name="notes">
-          <TextArea rows={3} placeholder="Add any additional notes..." />
+        <Form.Item label="Notes" name="notes">
+          <TextArea rows={3} placeholder="Add any additional remarks..." />
         </Form.Item>
       </Form>
     </Modal>

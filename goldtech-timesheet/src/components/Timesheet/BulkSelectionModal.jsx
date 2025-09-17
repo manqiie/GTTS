@@ -466,7 +466,7 @@ function BulkSelectionModal({
                       </Col>
                       <Col span={18}>
                         <Input
-                          placeholder="Remarks for this day (optional)"
+                          placeholder="Remarks for this day"
                           size="small"
                           value={individualModifications[date]?.notes || ''}
                           onChange={(e) => handleIndividualModification(date, 'notes', e.target.value)}

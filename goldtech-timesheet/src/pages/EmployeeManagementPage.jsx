@@ -1,12 +1,13 @@
-// EmployeeManagementPage.jsx - Updated with dynamic dropdown filters
+// EmployeeManagementPage.jsx - Updated with hierarchical filtering
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, Select, Button, Space, message } from 'antd';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, ClearOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/Common/PageHeader';
 import EmployeeTable from '../components/Employee/EmployeeTable';
 import EmployeeViewModal from '../components/Employee/EmployeeViewModal';
 import { useEmployeeStore } from '../hooks/useEmployeeStore';
+import apiService from '../services/apiService';
 
 const { Search } = Input;
 
@@ -26,11 +27,21 @@ function EmployeeManagementPage() {
     role: 'all',
     position: 'all',
     department: 'all',
-    projectSite: 'all',
-    company: 'all'
+    projectSite: 'all'
   });
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  // Hierarchical filter options
+  const [allProjectSites, setAllProjectSites] = useState([]);
+  const [filteredDepartments, setFilteredDepartments] = useState([]);
+  const [filteredPositions, setFilteredPositions] = useState([]);
+  const [filteredRoles, setFilteredRoles] = useState([]);
+
+  // Load initial filter data
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
 
   // Update filtered employees when data or filters change
   useEffect(() => {
@@ -38,15 +49,114 @@ function EmployeeManagementPage() {
     setFilteredEmployees(results);
   }, [employees, searchTerm, filters]);
 
+  // Update dependent filters when higher level filters change
+  useEffect(() => {
+    updateDependentFilters();
+  }, [filters.projectSite, filters.department, filters.position]);
+
+  const loadFilterOptions = async () => {
+    try {
+      // Load project sites
+      const projectSitesResponse = await apiService.getProjectSites();
+      if (projectSitesResponse.success) {
+        setAllProjectSites(projectSitesResponse.data || []);
+      }
+
+      // Load all departments initially
+      loadDepartments();
+      loadPositions();
+      loadRoles();
+    } catch (error) {
+      console.error('Error loading filter options:', error);
+    }
+  };
+
+  const loadDepartments = async (projectSite = null) => {
+    try {
+      const response = projectSite 
+        ? await apiService.getDepartmentsByProjectSite(projectSite)
+        : await apiService.getAllDepartments();
+      
+      if (response.success) {
+        setFilteredDepartments(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading departments:', error);
+      setFilteredDepartments([]);
+    }
+  };
+
+  const loadPositions = async (projectSite = null, department = null) => {
+    try {
+      const response = await apiService.getPositionsByFilters(projectSite, department);
+      if (response.success) {
+        setFilteredPositions(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading positions:', error);
+      setFilteredPositions([]);
+    }
+  };
+
+  const loadRoles = async (projectSite = null, department = null) => {
+    try {
+      const response = await apiService.getRolesByFilters(projectSite, department);
+      if (response.success) {
+        setFilteredRoles(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      setFilteredRoles(['admin', 'supervisor', 'employee']);
+    }
+  };
+
+  const updateDependentFilters = async () => {
+    const { projectSite, department } = filters;
+    
+    // Update departments based on project site
+    if (projectSite && projectSite !== 'all') {
+      await loadDepartments(projectSite);
+    } else {
+      await loadDepartments();
+    }
+
+    // Update positions based on project site and department
+    const projectSiteFilter = projectSite === 'all' ? null : projectSite;
+    const departmentFilter = department === 'all' ? null : department;
+    await loadPositions(projectSiteFilter, departmentFilter);
+    await loadRoles(projectSiteFilter, departmentFilter);
+  };
+
   const handleSearch = (value) => {
     setSearchTerm(value);
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    const newFilters = { ...filters, [key]: value };
+    
+    // Clear dependent filters when parent filter changes
+    if (key === 'projectSite') {
+      newFilters.department = 'all';
+      newFilters.position = 'all';
+      newFilters.role = 'all';
+    } else if (key === 'department') {
+      newFilters.position = 'all';
+      newFilters.role = 'all';
+    }
+    
+    setFilters(newFilters);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilters({
+      status: 'all',
+      role: 'all',
+      position: 'all',
+      department: 'all',
+      projectSite: 'all'
+    });
+    loadFilterOptions(); // Reload all options
   };
 
   const handleView = (employee) => {
@@ -71,50 +181,28 @@ function EmployeeManagementPage() {
     navigate('/employee-management/create');
   };
 
-  // Get unique values for dropdown filters - dynamically populated from user data
-  const getUniqueValues = (key) => {
-    const values = [...new Set(employees.map(emp => emp[key]).filter(Boolean))].sort();
-    return values.map(value => ({ label: value, value }));
-  };
-
-  // Get role options from existing users
-  const getRoleOptions = () => {
-    const roleSet = new Set();
-    employees.forEach(emp => {
-      if (emp.roles) {
-        emp.roles.forEach(role => roleSet.add(role.name));
-      }
-    });
-    return Array.from(roleSet).map(role => ({ 
-      label: role.charAt(0).toUpperCase() + role.slice(1), 
-      value: role 
-    }));
-  };
-
-  // Generate filter options based on actual user data
-  const positionOptions = [
-    { label: 'All Positions', value: 'all' },
-    ...getUniqueValues('position')
+  // Generate filter options
+  const projectSiteOptions = [
+    { label: 'All Project Sites', value: 'all' },
+    ...allProjectSites.map(site => ({ label: site, value: site }))
   ];
 
   const departmentOptions = [
     { label: 'All Departments', value: 'all' },
-    ...getUniqueValues('department')
+    ...filteredDepartments.map(dept => ({ label: dept, value: dept }))
   ];
 
-  const projectSiteOptions = [
-    { label: 'All Project Sites', value: 'all' },
-    ...getUniqueValues('project_site')
-  ];
-
-  const companyOptions = [
-    { label: 'All Companies', value: 'all' },
-    ...getUniqueValues('company')
+  const positionOptions = [
+    { label: 'All Positions', value: 'all' },
+    ...filteredPositions.map(pos => ({ label: pos, value: pos }))
   ];
 
   const roleOptions = [
     { label: 'All Roles', value: 'all' },
-    ...getRoleOptions()
+    ...filteredRoles.map(role => ({ 
+      label: role.charAt(0).toUpperCase() + role.slice(1), 
+      value: role 
+    }))
   ];
 
   const breadcrumbs = [
@@ -139,7 +227,7 @@ function EmployeeManagementPage() {
         }
       />
 
-      {/* Search and Filters */}
+      {/* Hierarchical Search and Filters */}
       <Card style={{ marginBottom: 20 }}>
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={6}>
@@ -148,10 +236,11 @@ function EmployeeManagementPage() {
               allowClear
               onSearch={handleSearch}
               onChange={(e) => handleSearch(e.target.value)}
+              value={searchTerm}
             />
           </Col>
           
-          <Col xs={12} sm={6} md={4}>
+          <Col xs={12} sm={6} md={3}>
             <Select
               style={{ width: '100%' }}
               value={filters.status}
@@ -164,46 +253,20 @@ function EmployeeManagementPage() {
             />
           </Col>
 
-          <Col xs={12} sm={6} md={4}>
-            <Select
-              style={{ width: '100%' }}
-              value={filters.role}
-              onChange={(value) => handleFilterChange('role', value)}
-              options={roleOptions}
-            />
-          </Col>
-          
-          <Col xs={12} sm={6} md={5}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Filter by position"
-              value={filters.position}
-              onChange={(value) => handleFilterChange('position', value)}
-              options={positionOptions}
-              showSearch
-              filterOption={(input, option) =>
-                option.label.toLowerCase().includes(input.toLowerCase())
-              }
-            />
-          </Col>
-          
-          <Col xs={12} sm={6} md={5}>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="Filter by department"
-              value={filters.department}
-              onChange={(value) => handleFilterChange('department', value)}
-              options={departmentOptions}
-              showSearch
-              filterOption={(input, option) =>
-                option.label.toLowerCase().includes(input.toLowerCase())
-              }
-            />
+          <Col xs={12} sm={6} md={3}>
+            <Button 
+              icon={<ClearOutlined />} 
+              onClick={handleClearFilters}
+              title="Clear all filters"
+            >
+              Clear
+            </Button>
           </Col>
         </Row>
         
+        {/* Hierarchical Filters Row */}
         <Row gutter={[16, 16]} align="middle" style={{ marginTop: 16 }}>
-          <Col xs={12} sm={6} md={6}>
+          <Col xs={24} sm={12} md={6}>
             <Select
               style={{ width: '100%' }}
               placeholder="Filter by project site"
@@ -217,17 +280,48 @@ function EmployeeManagementPage() {
             />
           </Col>
           
-          <Col xs={12} sm={6} md={6}>
+          <Col xs={24} sm={12} md={6}>
             <Select
               style={{ width: '100%' }}
-              placeholder="Filter by company"
-              value={filters.company}
-              onChange={(value) => handleFilterChange('company', value)}
-              options={companyOptions}
+              placeholder="Filter by department"
+              value={filters.department}
+              onChange={(value) => handleFilterChange('department', value)}
+              options={departmentOptions}
               showSearch
               filterOption={(input, option) =>
                 option.label.toLowerCase().includes(input.toLowerCase())
               }
+              disabled={filteredDepartments.length === 0}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="Filter by position"
+              value={filters.position}
+              onChange={(value) => handleFilterChange('position', value)}
+              options={positionOptions}
+              showSearch
+              filterOption={(input, option) =>
+                option.label.toLowerCase().includes(input.toLowerCase())
+              }
+              disabled={filteredPositions.length === 0}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="Filter by role"
+              value={filters.role}
+              onChange={(value) => handleFilterChange('role', value)}
+              options={roleOptions}
+              showSearch
+              filterOption={(input, option) =>
+                option.label.toLowerCase().includes(input.toLowerCase())
+              }
+              disabled={filteredRoles.length === 0}
             />
           </Col>
         </Row>

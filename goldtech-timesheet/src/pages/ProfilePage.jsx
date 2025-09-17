@@ -167,13 +167,7 @@ function ProfilePage() {
             >
               Change Password
             </Button>
-            <Button 
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={handleEditProfile}
-            >
-              Edit Profile
-            </Button>
+          
           </Space>
         }
       />
@@ -286,97 +280,6 @@ function ProfilePage() {
           </>
         )}
       </Card>
-
-      {/* Edit Profile Modal */}
-      <Modal
-        title="Edit Profile"
-        open={editModalVisible}
-        onCancel={() => {
-          setEditModalVisible(false);
-          form.resetFields();
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSaveProfile}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Full Name"
-                name="fullName"
-                rules={[
-                  { required: true, message: 'Please enter your full name' },
-                  { min: 2, message: 'Name must be at least 2 characters' }
-                ]}
-              >
-                <Input prefix={<UserOutlined />} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Phone Number"
-                name="phone"
-                rules={[
-                  { pattern: /^\+65\s\d{4}\s\d{4}$/, message: 'Please use Singapore format: +65 1234 5678' }
-                ]}
-              >
-                <Input prefix={<PhoneOutlined />} placeholder="+65 9123 4567" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                label="Email"
-                name="email"
-              >
-                <Input 
-                  prefix={<MailOutlined />} 
-                  disabled
-                  style={{ color: '#666' }}
-                  title="Email cannot be changed. Contact administrator if needed."
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <div style={{ 
-            background: '#f8f9fa', 
-            padding: '12px', 
-            borderRadius: '4px', 
-            marginBottom: '16px',
-            fontSize: '13px',
-            color: '#666'
-          }}>
-            <strong>Note:</strong> Work information (position, department, etc.) can only be updated by administrators. 
-            Contact your HR department or system administrator if changes are needed.
-          </div>
-
-          <div style={{ textAlign: 'right', marginTop: 24 }}>
-            <Space>
-              <Button onClick={() => {
-                setEditModalVisible(false);
-                form.resetFields();
-              }}>
-                Cancel
-              </Button>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                icon={<SaveOutlined />}
-                loading={updateLoading}
-              >
-                Save Changes
-              </Button>
-            </Space>
-          </div>
-        </Form>
-      </Modal>
 
       {/* Change Password Modal */}
       <Modal

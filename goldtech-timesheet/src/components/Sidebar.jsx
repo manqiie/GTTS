@@ -1,5 +1,4 @@
-
-// Sidebar.jsx - Complete Updated Version
+// Sidebar.jsx - Updated with supervisor role changes
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Space, Button, Modal, message } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -65,8 +64,8 @@ function Sidebar({ collapsed, setCollapsed }) {
       );
     }
 
-    // Add management items based on user roles
-    if (user?.roles?.some(role => ['manager', 'admin'].includes(role.name))) {
+    // Add management items based on user roles (supervisor instead of manager)
+    if (user?.roles?.some(role => ['supervisor', 'admin'].includes(role.name))) {
       baseItems.push(
         {
           type: 'divider',
@@ -94,7 +93,7 @@ function Sidebar({ collapsed, setCollapsed }) {
         {
           key: 'employee-management',
           icon: <TeamOutlined />,
-          label: 'User Management', // Updated label
+          label: 'User Management',
         }
       );
     }
@@ -182,9 +181,9 @@ function Sidebar({ collapsed, setCollapsed }) {
   const getUserRole = () => {
     if (!user || !user.roles) return '';
     
-    // Show primary role (admin > manager > employee)
+    // Show primary role (admin > supervisor > employee)
     if (user.roles.some(role => role.name === 'admin')) return 'Administrator';
-    if (user.roles.some(role => role.name === 'manager')) return 'Manager';
+    if (user.roles.some(role => role.name === 'supervisor')) return 'Supervisor';
     if (user.roles.some(role => role.name === 'employee')) return 'Employee';
     
     return user.roles[0]?.description || '';

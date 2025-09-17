@@ -1,4 +1,4 @@
-// EmployeeTable.jsx 
+// EmployeeTable.jsx - Updated with supervisor changes
 import React from 'react';
 import { Table, Tag, Space, Button, Popconfirm, Tooltip } from 'antd';
 import { 
@@ -25,7 +25,6 @@ function EmployeeTable({
       key: 'employee_id',
       width: 120,
       sorter: (a, b) => {
-        // Handle null/undefined employee_id for managers
         const aId = a.employee_id || '';
         const bId = b.employee_id || '';
         return aId.localeCompare(bId);
@@ -51,7 +50,7 @@ function EmployeeTable({
       width: 150,
       filters: [
         { text: 'Admin', value: 'admin' },
-        { text: 'Manager', value: 'manager' },
+        { text: 'Supervisor', value: 'supervisor' },
         { text: 'Employee', value: 'employee' },
       ],
       onFilter: (value, record) => {
@@ -64,7 +63,7 @@ function EmployeeTable({
               key={role.id} 
               color={
                 role.name === 'admin' ? 'red' : 
-                role.name === 'manager' ? 'orange' : 
+                role.name === 'supervisor' ? 'orange' : 
                 'blue'
               }
               style={{ marginBottom: 2 }}
@@ -82,6 +81,12 @@ function EmployeeTable({
       sorter: (a, b) => a.position.localeCompare(b.position),
     },
     {
+      title: 'Department',
+      dataIndex: 'department',
+      key: 'department',
+      sorter: (a, b) => a.department.localeCompare(b.department),
+    },
+    {
       title: 'Project Site',
       dataIndex: 'project_site',
       key: 'project_site',
@@ -93,13 +98,13 @@ function EmployeeTable({
       render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
     },
     {
-      title: 'Manager',
-      dataIndex: 'manager_name',
-      key: 'manager_name',
+      title: 'Supervisor',
+      dataIndex: 'supervisor_name',
+      key: 'supervisor_name',
       sorter: (a, b) => {
-        const aManager = a.manager_name || '';
-        const bManager = b.manager_name || '';
-        return aManager.localeCompare(bManager);
+        const aSupervisor = a.supervisor_name || '';
+        const bSupervisor = b.supervisor_name || '';
+        return aSupervisor.localeCompare(bSupervisor);
       },
       render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
     },

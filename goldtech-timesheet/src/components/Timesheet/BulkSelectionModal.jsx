@@ -5,7 +5,6 @@ import {
   Select, 
   Input, 
   Button, 
-  Upload, 
   Row, 
   Col,
   message,
@@ -15,17 +14,16 @@ import {
   Typography,
   Alert
 } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import WorkingHoursSelector from './WorkingHoursSelector';
 import OffInLieuSelector from './OffInLieuSelector';
+import SupportingDocuments from './SupportingDocuments';
 
 const { TextArea } = Input;
-const { Dragger } = Upload;
 const { Text } = Typography;
 
 /**
- * BulkSelectionModal Component with cascading Others dropdown
+ * BulkSelectionModal Component with SupportingDocuments integration
  */
 function BulkSelectionModal({ 
   visible, 
@@ -68,11 +66,32 @@ function BulkSelectionModal({
     { value: 'maternity_leave', label: 'Maternity Leave' }
   ];
 
-  const documentRequiredTypes = ['medical_leave'];
+  // Define which entry types require documents
+  const documentRequiredTypes = [
+    'annual_leave',
+    'medical_leave',
+    'childcare_leave',
+    'childcare_leave_halfday',
+    'shared_parental_leave',
+    'nopay_leave',
+    'hospitalization_leave',
+    'reservist',
+    'paternity_leave',
+    'compassionate_leave',
+    'maternity_leave'
+  ];
+
+  // Entry types that do NOT require documents
+  const noDocumentTypes = ['working_hours', 'off_in_lieu', 'day_off'];
 
   // Helper function to check if entry type is in others category
   const isOthersEntryType = (type) => {
     return othersEntryTypeOptions.some(option => option.value === type);
+  };
+
+  // Check if current entry type requires documents
+  const requiresDocuments = (type) => {
+    return documentRequiredTypes.includes(type);
   };
 
   // Reset form when modal opens/closes
@@ -120,14 +139,15 @@ function BulkSelectionModal({
 
     // Set first date as primary document day for document-required types
     const actualType = value === 'others' ? null : value;
-    if (documentRequiredTypes.includes(actualType)) {
+    if (requiresDocuments(actualType)) {
       setPrimaryDocumentDay(dates[0]);
     } else {
       setPrimaryDocumentDay(null);
     }
 
-    // Clear individual modifications when changing entry type
+    // Clear individual modifications and file list when changing entry type
     setIndividualModifications({});
+    setFileList([]);
   };
 
   /**
@@ -144,14 +164,15 @@ function BulkSelectionModal({
     });
 
     // Check if this others type requires documents
-    if (documentRequiredTypes.includes(value)) {
+    if (requiresDocuments(value)) {
       setPrimaryDocumentDay(dates[0]);
     } else {
       setPrimaryDocumentDay(null);
     }
 
-    // Clear individual modifications when changing entry type
+    // Clear individual modifications and file list when changing entry type
     setIndividualModifications({});
+    setFileList([]);
   };
 
   /**
@@ -159,6 +180,13 @@ function BulkSelectionModal({
    */
   const handleHoursChange = (hoursId) => {
     setSelectedHoursId(hoursId);
+  };
+
+  /**
+   * Handle supporting documents change
+   */
+  const handleDocumentsChange = (newFileList) => {
+    setFileList(newFileList);
   };
 
   /**
@@ -211,7 +239,7 @@ function BulkSelectionModal({
         }
 
         // Validate document requirement
-        if (documentRequiredTypes.includes(actualEntryType) && fileList.length === 0) {
+        if (requiresDocuments(actualEntryType) && fileList.length === 0) {
           message.warning('Supporting documents are required for this leave type');
           return;
         }
@@ -247,7 +275,7 @@ function BulkSelectionModal({
           }
 
           // Handle document references
-          if (documentRequiredTypes.includes(actualEntryType)) {
+          if (requiresDocuments(actualEntryType)) {
             if (date === primaryDocumentDay) {
               baseData.supportingDocuments = fileList.map(file => ({
                 name: file.name,
@@ -276,37 +304,6 @@ function BulkSelectionModal({
       .catch(error => {
         console.error('Form validation failed:', error);
       });
-  };
-
-  /**
-   * Handle file upload
-   */
-  const handleFileChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList);
-  };
-
-  const uploadProps = {
-    name: 'file',
-    multiple: true,
-    fileList: fileList,
-    beforeUpload: (file) => {
-      const isValidType = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword'].includes(file.type);
-      if (!isValidType) {
-        message.error('You can only upload PDF, JPG, PNG, or DOC files!');
-        return false;
-      }
-      const isLt5M = file.size / 1024 / 1024 < 5;
-      if (!isLt5M) {
-        message.error('File must be smaller than 5MB!');
-        return false;
-      }
-      return false;
-    },
-    onChange: handleFileChange,
-    onRemove: (file) => {
-      const newFileList = fileList.filter(item => item.uid !== file.uid);
-      setFileList(newFileList);
-    }
   };
 
   const offInLieuStats = entryType === 'off_in_lieu' ? getOffInLieuCompletionStats() : null;
@@ -390,8 +387,8 @@ function BulkSelectionModal({
           </>
         )}
 
-        {/* Primary Document Day Selection */}
-        {documentRequiredTypes.includes(entryType) && (
+        {/* Supporting Documents for applicable leave types */}
+        {entryType && requiresDocuments(entryType) && (
           <>
             <Divider>Document Management</Divider>
             <Form.Item label="Primary Document Day">
@@ -416,19 +413,19 @@ function BulkSelectionModal({
                 label="Supporting Documents" 
                 extra="Upload documents for the primary day. Other selected days will reference these documents."
               >
-                <Dragger {...uploadProps}>
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined />
-                  </p>
-                  <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                  <p className="ant-upload-hint">
-                    Documents will be linked to all selected days
-                  </p>
-                </Dragger>
+                <SupportingDocuments
+                  fileList={fileList}
+                  onChange={handleDocumentsChange}
+                  required={true}
+                  helpText={`Upload supporting documents for ${entryType.replace(/_/g, ' ')} (PDF, JPG, PNG, DOC - Max 5MB each)`}
+                  uploadText="Click or drag file to this area to upload"
+                  hintText="Documents will be linked to all selected days"
+                />
               </Form.Item>
             )}
           </>
         )}
+
 
         {/* Individual Day Configuration */}
         <Divider>
@@ -466,7 +463,7 @@ function BulkSelectionModal({
                       </Col>
                       <Col span={18}>
                         <Input
-                          placeholder="Remarks for this day"
+                          placeholder="Additional remarks for this specific day"
                           size="small"
                           value={individualModifications[date]?.notes || ''}
                           onChange={(e) => handleIndividualModification(date, 'notes', e.target.value)}
@@ -502,6 +499,20 @@ function BulkSelectionModal({
             }}
           />
         </div>
+
+        {/* Off in Lieu Progress Alert */}
+        {entryType === 'off_in_lieu' && offInLieuStats && (
+          <Alert
+            type={offInLieuStats.remaining === 0 ? 'success' : 'warning'}
+            message={`Off in Lieu Progress: ${offInLieuStats.completed}/${offInLieuStats.total} days completed`}
+            description={
+              offInLieuStats.remaining > 0 
+                ? `Please set date earned for ${offInLieuStats.remaining} remaining day(s)`
+                : 'All days have date earned set - ready to submit!'
+            }
+            style={{ marginTop: 16 }}
+          />
+        )}
       </Form>
     </Modal>
   );

@@ -6,19 +6,17 @@ import {
   Input, 
   DatePicker, 
   Button, 
-  Upload, 
   message
 } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import WorkingHoursSelector from './WorkingHoursSelector';
 import OffInLieuSelector from './OffInLieuSelector';
+import SupportingDocuments from './SupportingDocuments';
 
 const { TextArea } = Input;
-const { Dragger } = Upload;
 
 /**
- * DayEntryModal Component with Off in Lieu support and cascading Others dropdown
+ * DayEntryModal Component with SupportingDocuments integration
  */
 function DayEntryModal({ 
   visible, 
@@ -61,11 +59,32 @@ function DayEntryModal({
     { value: 'maternity_leave', label: 'Maternity Leave' }
   ];
 
-  const documentRequiredTypes = ['medical_leave', 'annual_leave'];
+  // Define which entry types require documents
+  const documentRequiredTypes = [
+    'annual_leave',
+    'medical_leave',
+    'childcare_leave',
+    'childcare_leave_halfday',
+    'shared_parental_leave',
+    'nopay_leave',
+    'hospitalization_leave',
+    'reservist',
+    'paternity_leave',
+    'compassionate_leave',
+    'maternity_leave'
+  ];
+
+  // Entry types that do NOT require documents
+  const noDocumentTypes = ['working_hours', 'off_in_lieu', 'day_off'];
 
   // Helper function to check if entry type is in others category
   const isOthersEntryType = (type) => {
     return othersEntryTypeOptions.some(option => option.value === type);
+  };
+
+  // Check if current entry type requires documents
+  const requiresDocuments = (type) => {
+    return documentRequiredTypes.includes(type);
   };
 
   // Reset form when modal opens/closes
@@ -87,6 +106,17 @@ function DayEntryModal({
         setEntryType(existingEntry.type);
         setShowOthersDropdown(isOthersType);
         setDateEarned(existingEntry.dateEarned || null);
+        
+        // Load existing documents if any
+        if (existingEntry.supportingDocuments) {
+          setFileList(existingEntry.supportingDocuments.map((doc, index) => ({
+            uid: `existing-${index}`,
+            name: doc.name,
+            status: 'done',
+            size: doc.size,
+            type: doc.type
+          })));
+        }
         
         if (existingEntry.type === 'working_hours') {
           const matchingHours = findMatchingHours(existingEntry.startTime, existingEntry.endTime);
@@ -153,6 +183,9 @@ function DayEntryModal({
       setDateEarned(null);
       form.setFieldValue('dateEarned', null);
     }
+
+    // Clear file list when changing entry type
+    setFileList([]);
   };
 
   /**
@@ -171,6 +204,9 @@ function DayEntryModal({
     // Reset date earned for others types (none of them are off_in_lieu)
     setDateEarned(null);
     form.setFieldValue('dateEarned', null);
+
+    // Clear file list when changing others entry type
+    setFileList([]);
   };
 
   /**
@@ -188,6 +224,13 @@ function DayEntryModal({
   };
 
   /**
+   * Handle supporting documents change
+   */
+  const handleDocumentsChange = (newFileList) => {
+    setFileList(newFileList);
+  };
+
+  /**
    * Handle form submission
    */
   const handleSubmit = () => {
@@ -202,7 +245,7 @@ function DayEntryModal({
         }
 
         // Validate document requirement
-        if (documentRequiredTypes.includes(actualEntryType) && fileList.length === 0) {
+        if (requiresDocuments(actualEntryType) && fileList.length === 0) {
           message.warning('Supporting documents are required for this leave type');
           return;
         }
@@ -244,37 +287,6 @@ function DayEntryModal({
       .catch(error => {
         console.error('Form validation failed:', error);
       });
-  };
-
-  /**
-   * Handle file upload
-   */
-  const handleFileChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList);
-  };
-
-  const uploadProps = {
-    name: 'file',
-    multiple: true,
-    fileList: fileList,
-    beforeUpload: (file) => {
-      const isValidType = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword'].includes(file.type);
-      if (!isValidType) {
-        message.error('You can only upload PDF, JPG, PNG, or DOC files!');
-        return false;
-      }
-      const isLt5M = file.size / 1024 / 1024 < 5;
-      if (!isLt5M) {
-        message.error('File must be smaller than 5MB!');
-        return false;
-      }
-      return false;
-    },
-    onChange: handleFileChange,
-    onRemove: (file) => {
-      const newFileList = fileList.filter(item => item.uid !== file.uid);
-      setFileList(newFileList);
-    }
   };
 
   return (
@@ -368,24 +380,18 @@ function DayEntryModal({
           </>
         )}
 
-        {/* Supporting Documents */}
-        {documentRequiredTypes.includes(entryType) && (
+        {/* Supporting Documents for applicable leave types */}
+        {entryType && requiresDocuments(entryType) && (
           <Form.Item 
-            label="Supporting Documents" 
-            name="supportingDocs"
-            rules={[{ required: true, message: 'Please select entry type' }]}
-            extra="Upload supporting documents (PDF, JPG, PNG, DOC - Max 5MB each)"
-            
+            label="Supporting Documents"
+          
           >
-            <Dragger {...uploadProps}>
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined />
-              </p>
-              <p className="ant-upload-text">Click or drag file to this area to upload</p>
-              <p className="ant-upload-hint">
-                Support for single or bulk upload. Maximum file size: 5MB
-              </p>
-            </Dragger>
+            <SupportingDocuments
+              fileList={fileList}
+              onChange={handleDocumentsChange}
+              required={true}
+              helpText={`Upload supporting documents for ${entryType.replace(/_/g, ' ')} (PDF, JPG, PNG, DOC - Max 5MB each)`}
+            />
           </Form.Item>
         )}
 

@@ -261,12 +261,10 @@ function ProfilePage() {
               <Descriptions.Item label="Project Site">
                 {user.projectSite || 'Not assigned'}
               </Descriptions.Item>
-              <Descriptions.Item label={<Space><TeamOutlined />Manager</Space>}>
+              <Descriptions.Item label={<Space><TeamOutlined />Supervisor</Space>}>
                 {user.managerName || 'Not assigned'}
               </Descriptions.Item>
-              <Descriptions.Item label="Company">
-                {user.company || 'GoldTech Resources'}
-              </Descriptions.Item>
+            
             </Descriptions>
           </Col>
         </Row>

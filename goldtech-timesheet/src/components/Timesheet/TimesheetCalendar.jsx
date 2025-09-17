@@ -12,7 +12,7 @@ const { Text } = Typography;
  * - Single day clicking
  * - Multi-day selection for bulk operations
  * - Select All / Deselect All functionality
- * - Visual indicators for different entry types
+ * - Visual indicators for different entry types including half-day entries
  * - Weekend/working day distinction
  * - Entry status display
  */
@@ -135,26 +135,42 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
   };
 
   /**
-   * Get entry display info
+   * Get entry display info with support for half-day entries
    */
   const getEntryDisplay = (entry) => {
     if (!entry) return null;
+
+    const getLeaveTypeDisplay = (type, halfDayPeriod = null) => {
+      const baseTypes = {
+        'annual_leave': { text: 'AL', color: 'orange' },
+        'annual_leave_halfday': { text: halfDayPeriod ? `AL-${halfDayPeriod}` : 'AL-HD', color: 'orange' },
+        'medical_leave': { text: 'ML', color: 'red' },
+        'childcare_leave': { text: 'CL', color: 'purple' },
+        'childcare_leave_halfday': { text: halfDayPeriod ? `CL-${halfDayPeriod}` : 'CL-HD', color: 'purple' },
+        'shared_parental_leave': { text: 'SPL', color: 'cyan' },
+        'nopay_leave': { text: 'NPL', color: 'gray' },
+        'nopay_leave_halfday': { text: halfDayPeriod ? `NPL-${halfDayPeriod}` : 'NPL-HD', color: 'gray' },
+        'hospitalization_leave': { text: 'HL', color: 'red' },
+        'reservist': { text: 'RSV', color: 'green' },
+        'paternity_leave': { text: 'PL', color: 'blue' },
+        'compassionate_leave': { text: 'CPL', color: 'magenta' },
+        'maternity_leave': { text: 'ML', color: 'pink' },
+        'off_in_lieu': { text: 'OIL', color: 'purple' },
+        'day_off': { text: 'PH', color: 'gold' }
+      };
+
+      return baseTypes[type] || { text: 'N/A', color: 'default' };
+    };
 
     switch (entry.type) {
       case 'working_hours':
         const start = dayjs(entry.startTime, 'HH:mm').format('h:mmA');
         const end = dayjs(entry.endTime, 'HH:mm').format('h:mmA');
         return { text: `${start}-${end}`, color: 'blue' };
-      case 'annual_leave':
-        return { text: 'AL', color: 'orange' };
-      case 'medical_leave':
-        return { text: 'ML', color: 'red' };
-      case 'off_in_lieu':
-        return { text: 'OIL', color: 'purple' };
-      case 'rotating_shift':
-        return { text: 'RS', color: 'cyan' };
+      
+      // Handle all leave types including half-day variants
       default:
-        return { text: 'N/A', color: 'default' };
+        return getLeaveTypeDisplay(entry.type, entry.halfDayPeriod);
     }
   };
 
@@ -310,22 +326,12 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
                     border: '1px solid #fff'
                   }} />
                 )}
-
-              
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Legend */}
-      <Row style={{ marginTop: 16 }} gutter={16}>
-        <Col>
-          <Space size="large">
-            
-          </Space>
-        </Col>
-      </Row>
     </div>
   );
 }

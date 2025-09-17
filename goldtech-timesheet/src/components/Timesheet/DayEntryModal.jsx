@@ -6,7 +6,8 @@ import {
   Input, 
   DatePicker, 
   Button, 
-  message
+  message,
+  Radio
 } from 'antd';
 import dayjs from 'dayjs';
 import WorkingHoursSelector from './WorkingHoursSelector';
@@ -16,7 +17,7 @@ import SupportingDocuments from './SupportingDocuments';
 const { TextArea } = Input;
 
 /**
- * DayEntryModal Component with SupportingDocuments integration
+ * DayEntryModal Component with SupportingDocuments integration and Half Day options
  */
 function DayEntryModal({ 
   visible, 
@@ -36,22 +37,24 @@ function DayEntryModal({
   const [dateEarned, setDateEarned] = useState(null);
   const [showOthersDropdown, setShowOthersDropdown] = useState(false);
 
-  // Main entry type options (with Others option)
+  // Main entry type options (with Others option and half day options)
   const mainEntryTypeOptions = [
     { value: 'working_hours', label: 'Working Hours' },
     { value: 'annual_leave', label: 'Annual Leave' },
+    { value: 'annual_leave_halfday', label: 'Annual Leave (Half Day)' },
     { value: 'medical_leave', label: 'Medical Leave' },
     { value: 'off_in_lieu', label: 'Off in Lieu' },
     { value: 'day_off', label: 'Public Holiday' },
     { value: 'others', label: 'Others' }
   ];
 
-  // Others dropdown options
+  // Others dropdown options (with half day options for applicable types)
   const othersEntryTypeOptions = [
     { value: 'childcare_leave', label: 'Childcare Leave' },
     { value: 'childcare_leave_halfday', label: 'Childcare Leave (Half Day)' },
     { value: 'shared_parental_leave', label: 'Shared Parental Leave' },
     { value: 'nopay_leave', label: 'No Pay Leave' },
+    { value: 'nopay_leave_halfday', label: 'No Pay Leave (Half Day)' },
     { value: 'hospitalization_leave', label: 'Hospitalization Leave' },
     { value: 'reservist', label: 'Reservist' },
     { value: 'paternity_leave', label: 'Paternity Leave' },
@@ -62,11 +65,13 @@ function DayEntryModal({
   // Define which entry types require documents
   const documentRequiredTypes = [
     'annual_leave',
+    'annual_leave_halfday',
     'medical_leave',
     'childcare_leave',
     'childcare_leave_halfday',
     'shared_parental_leave',
     'nopay_leave',
+    'nopay_leave_halfday',
     'hospitalization_leave',
     'reservist',
     'paternity_leave',
@@ -77,6 +82,13 @@ function DayEntryModal({
   // Entry types that do NOT require documents
   const noDocumentTypes = ['working_hours', 'off_in_lieu', 'day_off'];
 
+  // Half day types that need AM/PM selection
+  const halfDayTypes = [
+    'annual_leave_halfday',
+    'childcare_leave_halfday',
+    'nopay_leave_halfday'
+  ];
+
   // Helper function to check if entry type is in others category
   const isOthersEntryType = (type) => {
     return othersEntryTypeOptions.some(option => option.value === type);
@@ -85,6 +97,11 @@ function DayEntryModal({
   // Check if current entry type requires documents
   const requiresDocuments = (type) => {
     return documentRequiredTypes.includes(type);
+  };
+
+  // Check if current entry type is a half day type
+  const isHalfDayType = (type) => {
+    return halfDayTypes.includes(type);
   };
 
   // Reset form when modal opens/closes
@@ -100,7 +117,8 @@ function DayEntryModal({
           notes: existingEntry.notes || '',
           startTime: existingEntry.startTime ? dayjs(existingEntry.startTime, 'HH:mm') : null,
           endTime: existingEntry.endTime ? dayjs(existingEntry.endTime, 'HH:mm') : null,
-          dateEarned: existingEntry.dateEarned || null
+          dateEarned: existingEntry.dateEarned || null,
+          halfDayPeriod: existingEntry.halfDayPeriod || undefined
         });
         
         setEntryType(existingEntry.type);
@@ -186,6 +204,9 @@ function DayEntryModal({
 
     // Clear file list when changing entry type
     setFileList([]);
+    
+    // Clear half day period when changing entry type
+    form.setFieldValue('halfDayPeriod', undefined);
   };
 
   /**
@@ -207,6 +228,9 @@ function DayEntryModal({
 
     // Clear file list when changing others entry type
     setFileList([]);
+    
+    // Clear half day period when changing entry type
+    form.setFieldValue('halfDayPeriod', undefined);
   };
 
   /**
@@ -244,6 +268,12 @@ function DayEntryModal({
           return;
         }
 
+        // Validate half day period for half day types
+        if (isHalfDayType(actualEntryType) && !values.halfDayPeriod) {
+          message.warning('Please select AM or PM for half day leave');
+          return;
+        }
+
         // Validate document requirement
         if (requiresDocuments(actualEntryType) && fileList.length === 0) {
           message.warning('Supporting documents are required for this leave type');
@@ -266,6 +296,9 @@ function DayEntryModal({
           }),
           ...(actualEntryType === 'off_in_lieu' && {
             dateEarned: dateEarned
+          }),
+          ...(isHalfDayType(actualEntryType) && {
+            halfDayPeriod: values.halfDayPeriod
           }),
           ...(fileList.length > 0 && {
             supportingDocuments: fileList.map(file => ({
@@ -334,6 +367,20 @@ function DayEntryModal({
           </Form.Item>
         )}
 
+        {/* Half Day Period Selection */}
+        {entryType && isHalfDayType(entryType) && (
+          <Form.Item
+            label="Half Day Period"
+            name="halfDayPeriod"
+            rules={[{ required: true, message: 'Please select AM or PM' }]}
+          >
+            <Radio.Group>
+              <Radio value="AM">AM (Morning)</Radio>
+              <Radio value="PM">PM (Afternoon)</Radio>
+            </Radio.Group>
+          </Form.Item>
+        )}
+
         {/* Working Hours Selection */}
         {entryType === 'working_hours' && (
           <>
@@ -384,7 +431,6 @@ function DayEntryModal({
         {entryType && requiresDocuments(entryType) && (
           <Form.Item 
             label="Supporting Documents"
-          
           >
             <SupportingDocuments
               fileList={fileList}

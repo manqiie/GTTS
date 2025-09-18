@@ -95,7 +95,7 @@ function WorkingHoursSelector({
    */
   const getHoursOptions = () => {
     const predefinedOptions = [
-      { value: '9-18', label: '9:00 AM - 6:00 PM', startTime: '09:00', endTime: '18:00' },
+      //{ value: '9-18', label: '9:00 AM - 6:00 PM', startTime: '09:00', endTime: '18:00' },
     ];
 
     const customOptions = customHoursList.map(custom => ({
@@ -117,7 +117,7 @@ function WorkingHoursSelector({
           }}
         >
           <span>
-            {dayjs(custom.startTime, 'HH:mm').format('h:mm A')} - {dayjs(custom.endTime, 'HH:mm').format('h:mm A')} (Custom)
+            {dayjs(custom.startTime, 'HH:mm').format('h:mm A')} - {dayjs(custom.endTime, 'HH:mm').format('h:mm A')} 
           </span>
           <Popconfirm
             title="Delete this custom time?"

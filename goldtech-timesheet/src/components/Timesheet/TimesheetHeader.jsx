@@ -37,15 +37,7 @@ function TimesheetHeader({ year, month, status, onYearChange, onMonthChange }) {
     { value: 12, label: 'December' },
   ];
 
-  // Status configuration
-  const statusConfig = {
-    draft: { color: 'orange', text: 'Draft' },
-    pending: { color: 'blue', text: 'Pending Approval' },
-    approved: { color: 'green', text: 'Approved' },
-    rejected: { color: 'red', text: 'Rejected' },
-  };
 
-  const currentStatus = statusConfig[status] || statusConfig.draft;
 
   return (
     <Card style={{ marginBottom: 20 }}>
@@ -90,12 +82,7 @@ function TimesheetHeader({ year, month, status, onYearChange, onMonthChange }) {
               />
             </Col>
             
-            {/* Status Tag */}
-            <Col>
-              <Tag color={currentStatus.color} style={{ margin: 0 }}>
-                {currentStatus.text}
-              </Tag>
-            </Col>
+         
           </Row>
         </Col>
       </Row>

@@ -1,3 +1,4 @@
+// Updated SupportingDocuments.jsx - Convert files to base64
 import React from 'react';
 import { Upload, message } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
@@ -5,15 +6,7 @@ import { InboxOutlined } from '@ant-design/icons';
 const { Dragger } = Upload;
 
 /**
- * SupportingDocuments Component
- * 
- * Reusable component for handling document uploads across different leave types.
- * Features:
- * - Drag and drop file upload
- * - File type validation (PDF, JPG, PNG, DOC)
- * - File size validation (max 5MB)
- * - Multiple file support
- * - Custom styling and messaging
+ * SupportingDocuments Component - Updated with base64 conversion
  */
 function SupportingDocuments({ 
   fileList = [], 
@@ -26,11 +19,54 @@ function SupportingDocuments({
 }) {
 
   /**
-   * Handle file upload change
+   * Convert file to base64
    */
-  const handleFileChange = ({ fileList: newFileList }) => {
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        // Remove the data:image/jpeg;base64, prefix
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  /**
+   * Handle file upload change with base64 conversion
+   */
+  const handleFileChange = async ({ fileList: newFileList }) => {
+    // Process each file and convert to base64
+    const processedFileList = await Promise.all(
+      newFileList.map(async (file) => {
+        if (file.originFileObj && !file.base64Data) {
+          try {
+            const base64Data = await convertToBase64(file.originFileObj);
+            return {
+              ...file,
+              base64Data: base64Data,
+              // Add data needed by backend
+              name: file.name,
+              type: file.type,
+              size: file.size
+            };
+          } catch (error) {
+            console.error('Error converting file to base64:', error);
+            message.error(`Failed to process ${file.name}`);
+            return null;
+          }
+        }
+        return file;
+      })
+    );
+
+    // Filter out any null files (failed conversions)
+    const validFiles = processedFileList.filter(file => file !== null);
+
     if (onChange) {
-      onChange(newFileList);
+      onChange(validFiles);
     }
   };
 
@@ -106,8 +142,6 @@ function SupportingDocuments({
           {helpText}
         </div>
       )}
-      
-      
     </div>
   );
 }

@@ -1,3 +1,4 @@
+// Updated BulkSelectionModal.jsx - Send documents to backend
 import React, { useState, useEffect } from 'react';
 import { 
   Modal, 
@@ -23,9 +24,6 @@ import SupportingDocuments from './SupportingDocuments';
 const { TextArea } = Input;
 const { Text } = Typography;
 
-/**
- * BulkSelectionModal Component with SupportingDocuments integration and Half Day options
- */
 function BulkSelectionModal({ 
   visible, 
   dates, 
@@ -44,7 +42,7 @@ function BulkSelectionModal({
   const [fileList, setFileList] = useState([]);
   const [individualModifications, setIndividualModifications] = useState({});
 
-  // Main entry type options (with Others option and half day options)
+  // Entry type options
   const mainEntryTypeOptions = [
     { value: 'working_hours', label: 'Working Hours' },
     { value: 'annual_leave', label: 'Annual Leave' },
@@ -55,7 +53,6 @@ function BulkSelectionModal({
     { value: 'others', label: 'Others' }
   ];
 
-  // Others dropdown options (with half day options for applicable types)
   const othersEntryTypeOptions = [
     { value: 'childcare_leave', label: 'Childcare Leave' },
     { value: 'childcare_leave_halfday', label: 'Childcare Leave (Half Day)' },
@@ -71,42 +68,26 @@ function BulkSelectionModal({
 
   // Define which entry types require documents
   const documentRequiredTypes = [
-    'annual_leave',
-    'annual_leave_halfday',
-    'medical_leave',
-    'childcare_leave',
-    'childcare_leave_halfday',
-    'shared_parental_leave',
-    'nopay_leave',
-    'nopay_leave_halfday',
-    'hospitalization_leave',
-    'reservist',
-    'paternity_leave',
-    'compassionate_leave',
-    'maternity_leave'
+    'annual_leave', 'annual_leave_halfday', 'medical_leave',
+    'childcare_leave', 'childcare_leave_halfday', 'shared_parental_leave',
+    'nopay_leave', 'nopay_leave_halfday', 'hospitalization_leave',
+    'reservist', 'paternity_leave', 'compassionate_leave', 'maternity_leave'
   ];
-
-  // Entry types that do NOT require documents
-  const noDocumentTypes = ['working_hours', 'off_in_lieu', 'day_off'];
 
   // Half day types that need AM/PM selection
   const halfDayTypes = [
-    'annual_leave_halfday',
-    'childcare_leave_halfday',
-    'nopay_leave_halfday'
+    'annual_leave_halfday', 'childcare_leave_halfday', 'nopay_leave_halfday'
   ];
 
-  // Helper function to check if entry type is in others category
+  // Helper functions
   const isOthersEntryType = (type) => {
     return othersEntryTypeOptions.some(option => option.value === type);
   };
 
-  // Check if current entry type requires documents
   const requiresDocuments = (type) => {
     return documentRequiredTypes.includes(type);
   };
 
-  // Check if current entry type is a half day type
   const isHalfDayType = (type) => {
     return halfDayTypes.includes(type);
   };
@@ -124,13 +105,11 @@ function BulkSelectionModal({
     }
   }, [visible, dates, form]);
 
-  /**
-   * Handle main entry type change
-   */
+  // Handle main entry type change
   const handleEntryTypeChange = (value) => {
     if (value === 'others') {
       setShowOthersDropdown(true);
-      setEntryType(null); // Reset until others selection is made
+      setEntryType(null);
       form.setFieldValue('othersEntryType', undefined);
     } else {
       setShowOthersDropdown(false);
@@ -165,56 +144,46 @@ function BulkSelectionModal({
     // Clear individual modifications and file list when changing entry type
     setIndividualModifications({});
     setFileList([]);
-    
-    // Clear half day period when changing entry type
     form.setFieldValue('halfDayPeriod', undefined);
   };
 
-  /**
-   * Handle others entry type change
-   */
+  // Handle others entry type change
   const handleOthersEntryTypeChange = (value) => {
     setEntryType(value);
     
-    // Reset working hours related fields for others types
     setSelectedHoursId(null);
     form.setFieldsValue({
       startTime: null,
       endTime: null
     });
 
-    // Check if this others type requires documents
     if (requiresDocuments(value)) {
       setPrimaryDocumentDay(dates[0]);
     } else {
       setPrimaryDocumentDay(null);
     }
 
-    // Clear individual modifications and file list when changing entry type
     setIndividualModifications({});
     setFileList([]);
-    
-    // Clear half day period when changing entry type
     form.setFieldValue('halfDayPeriod', undefined);
   };
 
-  /**
-   * Handle working hours selection change
-   */
-  const handleHoursChange = (hoursId) => {
-    setSelectedHoursId(hoursId);
-  };
-
-  /**
-   * Handle supporting documents change
-   */
+  // Handle supporting documents change
   const handleDocumentsChange = (newFileList) => {
     setFileList(newFileList);
   };
 
-  /**
-   * Handle individual day modification
-   */
+  // Convert fileList to format expected by backend
+  const prepareDocumentsForBackend = () => {
+    return fileList.map(file => ({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      base64Data: file.base64Data
+    }));
+  };
+
+  // Handle individual day modification
   const handleIndividualModification = (date, field, value) => {
     setIndividualModifications(prev => ({
       ...prev,
@@ -225,16 +194,12 @@ function BulkSelectionModal({
     }));
   };
 
-  /**
-   * Handle individual date earned modification for Off in Lieu
-   */
+  // Handle individual date earned modification for Off in Lieu
   const handleIndividualDateEarnedChange = (date, earnedDate) => {
     handleIndividualModification(date, 'dateEarned', earnedDate);
   };
 
-  /**
-   * Get count of days with date earned set
-   */
+  // Get count of days with date earned set
   const getOffInLieuCompletionStats = () => {
     const daysWithEarnedDate = dates.filter(date => 
       individualModifications[date]?.dateEarned
@@ -247,13 +212,10 @@ function BulkSelectionModal({
     };
   };
 
-  /**
-   * Handle form submission
-   */
+  // Handle form submission with document support
   const handleSubmit = () => {
     form.validateFields()
       .then(values => {
-        // Get the actual entry type (either direct selection or from others dropdown)
         const actualEntryType = showOthersDropdown ? values.othersEntryType : values.entryType;
         
         if (!actualEntryType) {
@@ -273,7 +235,7 @@ function BulkSelectionModal({
           return;
         }
 
-        // Validate Off in Lieu requirements - all days must have earned dates
+        // Validate Off in Lieu requirements
         if (actualEntryType === 'off_in_lieu') {
           const stats = getOffInLieuCompletionStats();
           if (stats.remaining > 0) {
@@ -285,7 +247,7 @@ function BulkSelectionModal({
         const bulkData = dates.map(date => {
           const baseData = {
             date,
-            type: actualEntryType, // Use the actual entry type here
+            type: actualEntryType,
             notes: values.notes || '',
             ...(actualEntryType === 'working_hours' && {
               startTime: values.startTime.format('HH:mm'),
@@ -309,11 +271,7 @@ function BulkSelectionModal({
           // Handle document references
           if (requiresDocuments(actualEntryType)) {
             if (date === primaryDocumentDay) {
-              baseData.supportingDocuments = fileList.map(file => ({
-                name: file.name,
-                size: file.size,
-                type: file.type
-              }));
+              baseData.supportingDocuments = prepareDocumentsForBackend();
               baseData.isPrimaryDocument = true;
             } else {
               baseData.documentReference = primaryDocumentDay;
@@ -415,18 +373,15 @@ function BulkSelectionModal({
               <WorkingHoursSelector
                 customHoursList={customHoursList}
                 selectedHoursId={selectedHoursId}
-                onHoursChange={handleHoursChange}
+                onHoursChange={setSelectedHoursId}
                 onAddCustomHours={onAddCustomHours}
                 onRemoveCustomHours={onRemoveCustomHours}
                 form={form}
               />
             </Form.Item>
-
-            {/* Hidden form fields for start/end time */}
             <Form.Item name="startTime" hidden>
               <input type="hidden" />
             </Form.Item>
-            
             <Form.Item name="endTime" hidden>
               <input type="hidden" />
             </Form.Item>
@@ -559,6 +514,9 @@ function BulkSelectionModal({
           />
         )}
 
+        <Form.Item label="General Notes" name="notes">
+          <TextArea rows={3} placeholder="Add general remarks for all selected days..." />
+        </Form.Item>
       </Form>
     </Modal>
   );

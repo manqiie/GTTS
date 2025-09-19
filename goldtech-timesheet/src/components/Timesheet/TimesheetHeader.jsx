@@ -67,17 +67,7 @@ function TimesheetHeader({
     return `${year}-${month}`;
   };
 
-  // Get status configuration
-  const getStatusConfig = (currentStatus) => {
-    const configs = {
-      draft: { color: 'default', text: 'Draft' },
-      submitted: { color: 'processing', text: 'Submitted' },
-      pending: { color: 'warning', text: 'Pending Approval' },
-      approved: { color: 'success', text: 'Approved' },
-      rejected: { color: 'error', text: 'Rejected' }
-    };
-    return configs[currentStatus] || configs.draft;
-  };
+ 
 
   // Show submission rules info
   const getSubmissionInfo = () => {
@@ -110,7 +100,7 @@ function TimesheetHeader({
     return null;
   };
 
-  const statusConfig = getStatusConfig(status);
+
   const availableOptions = getAvailableOptions();
 
   return (
@@ -165,27 +155,7 @@ function TimesheetHeader({
                 />
               </Col>
 
-              {/* Status Display */}
-              <Col>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Status</div>
-                  <Tag color={statusConfig.color} style={{ margin: 0 }}>
-                    {statusConfig.text}
-                  </Tag>
-                </div>
-              </Col>
-
-              {/* Submission Capability Indicators */}
-              {(canSubmit || canResubmit) && (
-                <Col>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '12px', color: '#666' }}>Action Available</div>
-                    <Tag color={canResubmit ? 'orange' : 'blue'} style={{ margin: 0 }}>
-                      {canResubmit ? 'Can Resubmit' : 'Can Submit'}
-                    </Tag>
-                  </div>
-                </Col>
-              )}
+           
             </Row>
           </Col>
         </Row>
@@ -194,59 +164,7 @@ function TimesheetHeader({
         {getSubmissionInfo()}
       </Card>
 
-      {/* Additional Status Information for Non-Draft Timesheets */}
-      {status !== 'draft' && (
-        <Card size="small" style={{ marginBottom: 16 }}>
-          <Row justify="space-between" align="middle">
-            <Col>
-              <Text strong>
-                {dayjs().year(year).month(month - 1).format('MMMM YYYY')} Timesheet Status
-              </Text>
-            </Col>
-            <Col>
-              <Tag color={statusConfig.color} style={{ fontSize: '14px', padding: '4px 12px' }}>
-                {statusConfig.text}
-              </Tag>
-            </Col>
-          </Row>
-          
-          {status === 'rejected' && (
-            <div style={{ marginTop: 8 }}>
-              <Alert
-                message="Timesheet Rejected"
-                description="This timesheet has been rejected and can be edited and resubmitted."
-                type="warning"
-                showIcon
-                style={{ marginTop: 8 }}
-              />
-            </div>
-          )}
-          
-          {status === 'submitted' && (
-            <div style={{ marginTop: 8 }}>
-              <Alert
-                message="Awaiting Approval"
-                description="This timesheet has been submitted and is awaiting supervisor approval."
-                type="info"
-                showIcon
-                style={{ marginTop: 8 }}
-              />
-            </div>
-          )}
-          
-          {status === 'approved' && (
-            <div style={{ marginTop: 8 }}>
-              <Alert
-                message="Approved"
-                description="This timesheet has been approved and is now final."
-                type="success"
-                showIcon
-                style={{ marginTop: 8 }}
-              />
-            </div>
-          )}
-        </Card>
-      )}
+      
     </div>
   );
 }

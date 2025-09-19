@@ -211,6 +211,7 @@ class ApiService {
       project_site: backendUser.projectSite,
       join_date: backendUser.joinDate,
       supervisor_name: backendUser.supervisorName, // Changed from managerName
+      supervisor_id: backendUser.supervisorId,
       status: backendUser.status,
       roles: backendUser.roles || [],
       created_at: backendUser.createdAt,

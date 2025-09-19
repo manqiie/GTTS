@@ -44,7 +44,7 @@ function EditEmployeePage() {
           project_site: emp.project_site,
           company: emp.company,
           join_date: dayjs(emp.join_date),
-          manager_id: emp.manager_id,
+          supervisor_id: emp.supervisor_id,
           roles: emp.roles ? emp.roles.map(role => role.id) : [], // Convert role objects to IDs
           status: emp.status
         };
@@ -76,7 +76,7 @@ function EditEmployeePage() {
         project_site: values.project_site || null,
         company: values.company || null,
         join_date: values.join_date.format('YYYY-MM-DD'),
-        manager_id: values.manager_id || null,
+        supervisor_id: values.supervisor_id || null,
         roles: values.roles, // Array of role IDs
         status: values.status
       };

@@ -57,7 +57,7 @@ export function useEmployeeStore() {
         projectSite: employeeData.project_site || null,
         company: employeeData.company || null,
         joinDate: employeeData.join_date, // Should already be in YYYY-MM-DD format
-        managerId: employeeData.manager_id || null,
+        supervisorId: employeeData.supervisor_id || null,
         roles: employeeData.roles // Array of role IDs
       };
 

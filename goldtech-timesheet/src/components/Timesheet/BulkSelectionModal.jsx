@@ -1,9 +1,8 @@
-// Updated BulkSelectionModal.jsx - Send documents to backend
+// Refactored BulkSelectionModal.jsx - Using shared components
 import React, { useState, useEffect } from 'react';
 import { 
   Modal, 
   Form, 
-  Select, 
   Input, 
   Button, 
   Row, 
@@ -13,13 +12,15 @@ import {
   List,
   Tag,
   Typography,
-  Alert,
-  Radio
+  Alert
 } from 'antd';
 import dayjs from 'dayjs';
-import WorkingHoursSelector from './WorkingHoursSelector';
+import SharedEntryTypeSelector from './EntryModal/SharedEntryTypeSelector';
+import SharedWorkingHoursSection from './EntryModal/SharedWorkingHoursSection';
+import SharedDocumentsSection from './EntryModal/SharedDocumentsSection';
 import OffInLieuSelector from './OffInLieuSelector';
-import SupportingDocuments from './SupportingDocuments';
+import { entryTypeConfig } from './EntryModal/entryTypeConfig';
+import { dayEntryUtils } from './EntryModal/dayEntryUtils';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -35,64 +36,18 @@ function BulkSelectionModal({
   onRemoveCustomHours
 }) {
   const [form] = Form.useForm();
+  
+  // Shared state that can use the same logic as DayEntryModal
   const [entryType, setEntryType] = useState(null);
   const [showOthersDropdown, setShowOthersDropdown] = useState(false);
-  const [primaryDocumentDay, setPrimaryDocumentDay] = useState(null);
   const [selectedHoursId, setSelectedHoursId] = useState(null);
   const [fileList, setFileList] = useState([]);
+  const [primaryDocumentDay, setPrimaryDocumentDay] = useState(null);
+  
+  // Bulk-specific state
   const [individualModifications, setIndividualModifications] = useState({});
 
-  // Entry type options
-  const mainEntryTypeOptions = [
-    { value: 'working_hours', label: 'Working Hours' },
-    { value: 'annual_leave', label: 'Annual Leave' },
-    { value: 'annual_leave_halfday', label: 'Annual Leave (Half Day)' },
-    { value: 'medical_leave', label: 'Medical Leave' },
-    { value: 'off_in_lieu', label: 'Off in Lieu' },
-    { value: 'day_off', label: 'Public Holiday' },
-    { value: 'others', label: 'Others' }
-  ];
-
-  const othersEntryTypeOptions = [
-    { value: 'childcare_leave', label: 'Childcare Leave' },
-    { value: 'childcare_leave_halfday', label: 'Childcare Leave (Half Day)' },
-    { value: 'shared_parental_leave', label: 'Shared Parental Leave' },
-    { value: 'nopay_leave', label: 'No Pay Leave' },
-    { value: 'nopay_leave_halfday', label: 'No Pay Leave (Half Day)' },
-    { value: 'hospitalization_leave', label: 'Hospitalization Leave' },
-    { value: 'reservist', label: 'Reservist' },
-    { value: 'paternity_leave', label: 'Paternity Leave' },
-    { value: 'compassionate_leave', label: 'Compassionate Leave' },
-    { value: 'maternity_leave', label: 'Maternity Leave' }
-  ];
-
-  // Define which entry types require documents
-  const documentRequiredTypes = [
-    'annual_leave', 'annual_leave_halfday', 'medical_leave',
-    'childcare_leave', 'childcare_leave_halfday', 'shared_parental_leave',
-    'nopay_leave', 'nopay_leave_halfday', 'hospitalization_leave',
-    'reservist', 'paternity_leave', 'compassionate_leave', 'maternity_leave'
-  ];
-
-  // Half day types that need AM/PM selection
-  const halfDayTypes = [
-    'annual_leave_halfday', 'childcare_leave_halfday', 'nopay_leave_halfday'
-  ];
-
-  // Helper functions
-  const isOthersEntryType = (type) => {
-    return othersEntryTypeOptions.some(option => option.value === type);
-  };
-
-  const requiresDocuments = (type) => {
-    return documentRequiredTypes.includes(type);
-  };
-
-  const isHalfDayType = (type) => {
-    return halfDayTypes.includes(type);
-  };
-
-  // Reset form when modal opens/closes
+  // Reset form when modal opens/closes - using shared logic
   useEffect(() => {
     if (visible && dates.length > 0) {
       form.resetFields();
@@ -105,59 +60,14 @@ function BulkSelectionModal({
     }
   }, [visible, dates, form]);
 
-  // Handle main entry type change
-  const handleEntryTypeChange = (value) => {
-    if (value === 'others') {
-      setShowOthersDropdown(true);
-      setEntryType(null);
-      form.setFieldValue('othersEntryType', undefined);
-    } else {
-      setShowOthersDropdown(false);
-      setEntryType(value);
-      form.setFieldValue('othersEntryType', undefined);
-      
-      if (value === 'working_hours') {
-        if (defaultHours) {
-          setSelectedHoursId(defaultHours.id);
-          form.setFieldsValue({
-            startTime: dayjs(defaultHours.startTime, 'HH:mm'),
-            endTime: dayjs(defaultHours.endTime, 'HH:mm')
-          });
-        }
-      } else {
-        setSelectedHoursId(null);
-        form.setFieldsValue({
-          startTime: null,
-          endTime: null
-        });
-      }
-    }
-
-    // Set first date as primary document day for document-required types
-    const actualType = value === 'others' ? null : value;
-    if (requiresDocuments(actualType)) {
-      setPrimaryDocumentDay(dates[0]);
-    } else {
-      setPrimaryDocumentDay(null);
-    }
-
-    // Clear individual modifications and file list when changing entry type
-    setIndividualModifications({});
-    setFileList([]);
-    form.setFieldValue('halfDayPeriod', undefined);
-  };
-
-  // Handle others entry type change
-  const handleOthersEntryTypeChange = (value) => {
-    setEntryType(value);
+  // Handle entry type change - reusing logic from DayEntryModal
+  const handleEntryTypeChange = (value, setters) => {
+    setEntryType(setters.entryType);
+    setShowOthersDropdown(setters.showOthersDropdown);
+    setSelectedHoursId(setters.selectedHoursId);
     
-    setSelectedHoursId(null);
-    form.setFieldsValue({
-      startTime: null,
-      endTime: null
-    });
-
-    if (requiresDocuments(value)) {
+    // Bulk-specific logic
+    if (entryTypeConfig.requiresDocuments(setters.entryType)) {
       setPrimaryDocumentDay(dates[0]);
     } else {
       setPrimaryDocumentDay(null);
@@ -166,21 +76,6 @@ function BulkSelectionModal({
     setIndividualModifications({});
     setFileList([]);
     form.setFieldValue('halfDayPeriod', undefined);
-  };
-
-  // Handle supporting documents change
-  const handleDocumentsChange = (newFileList) => {
-    setFileList(newFileList);
-  };
-
-  // Convert fileList to format expected by backend
-  const prepareDocumentsForBackend = () => {
-    return fileList.map(file => ({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      base64Data: file.base64Data
-    }));
   };
 
   // Handle individual day modification
@@ -194,12 +89,7 @@ function BulkSelectionModal({
     }));
   };
 
-  // Handle individual date earned modification for Off in Lieu
-  const handleIndividualDateEarnedChange = (date, earnedDate) => {
-    handleIndividualModification(date, 'dateEarned', earnedDate);
-  };
-
-  // Get count of days with date earned set
+  // Get Off in Lieu completion stats
   const getOffInLieuCompletionStats = () => {
     const daysWithEarnedDate = dates.filter(date => 
       individualModifications[date]?.dateEarned
@@ -212,88 +102,54 @@ function BulkSelectionModal({
     };
   };
 
-  // Handle form submission with document support
+  // Handle form submission - using shared validation logic
   const handleSubmit = () => {
     form.validateFields()
       .then(values => {
         const actualEntryType = showOthersDropdown ? values.othersEntryType : values.entryType;
         
-        if (!actualEntryType) {
-          message.warning('Please select a valid entry type');
+        // Use shared validation
+        const validation = dayEntryUtils.validateBulkEntryData(
+          values, 
+          actualEntryType, 
+          fileList, 
+          individualModifications, 
+          dates
+        );
+
+        if (!validation.isValid) {
+          validation.errors.forEach(error => message.warning(error));
           return;
         }
 
-        // Validate half day period for half day types
-        if (isHalfDayType(actualEntryType) && !values.halfDayPeriod) {
-          message.warning('Please select AM or PM for half day leave');
-          return;
-        }
-
-        // Validate document requirement
-        if (requiresDocuments(actualEntryType) && fileList.length === 0) {
-          message.warning('Supporting documents are required for this leave type');
-          return;
-        }
-
-        // Validate Off in Lieu requirements
-        if (actualEntryType === 'off_in_lieu') {
-          const stats = getOffInLieuCompletionStats();
-          if (stats.remaining > 0) {
-            message.warning(`Please set date earned for all ${stats.total} days. ${stats.remaining} day(s) still need earned dates.`);
-            return;
-          }
-        }
-
+        // Prepare bulk data using shared utility
         const bulkData = dates.map(date => {
-          const baseData = {
+          return dayEntryUtils.prepareBulkEntryData(
             date,
-            type: actualEntryType,
-            notes: values.notes || '',
-            ...(actualEntryType === 'working_hours' && {
-              startTime: values.startTime.format('HH:mm'),
-              endTime: values.endTime.format('HH:mm')
-            }),
-            ...(actualEntryType === 'off_in_lieu' && {
-              dateEarned: individualModifications[date]?.dateEarned
-            }),
-            ...(isHalfDayType(actualEntryType) && {
-              halfDayPeriod: values.halfDayPeriod
-            })
-          };
-
-          // Apply other individual modifications
-          const modifications = individualModifications[date];
-          if (modifications) {
-            const { dateEarned, ...otherModifications } = modifications;
-            Object.assign(baseData, otherModifications);
-          }
-
-          // Handle document references
-          if (requiresDocuments(actualEntryType)) {
-            if (date === primaryDocumentDay) {
-              baseData.supportingDocuments = prepareDocumentsForBackend();
-              baseData.isPrimaryDocument = true;
-            } else {
-              baseData.documentReference = primaryDocumentDay;
-              baseData.notes = `${baseData.notes ? baseData.notes + ' ' : ''}(References documents from ${dayjs(primaryDocumentDay).format('MMM DD')})`;
-            }
-          }
-
-          return baseData;
+            values,
+            actualEntryType,
+            individualModifications[date],
+            primaryDocumentDay,
+            fileList
+          );
         });
 
         onSave(bulkData);
-        form.resetFields();
-        setEntryType(null);
-        setShowOthersDropdown(false);
-        setSelectedHoursId(null);
-        setPrimaryDocumentDay(null);
-        setFileList([]);
-        setIndividualModifications({});
+        resetForm();
       })
       .catch(error => {
         console.error('Form validation failed:', error);
       });
+  };
+
+  const resetForm = () => {
+    form.resetFields();
+    setEntryType(null);
+    setShowOthersDropdown(false);
+    setSelectedHoursId(null);
+    setPrimaryDocumentDay(null);
+    setFileList([]);
+    setIndividualModifications({});
   };
 
   const offInLieuStats = entryType === 'off_in_lieu' ? getOffInLieuCompletionStats() : null;
@@ -308,210 +164,69 @@ function BulkSelectionModal({
       okText="Apply to All Selected Days"
     >
       {/* Selected Days Overview */}
-      <div style={{ marginBottom: 20, padding: 12, backgroundColor: '#fffaedff', borderRadius: 6 }}>
-        <Text strong>Selected Days: </Text>
-        <div style={{ marginTop: 8 }}>
-          {dates.map(date => (
-            <Tag 
-              key={date} 
-              color={date === primaryDocumentDay ? 'gold' : 'blue'}
-              style={{ margin: '2px 4px 2px 0' }}
-            >
-              {dayjs(date).format('MMM DD')}
-              {date === primaryDocumentDay && ' (Primary)'}
-            </Tag>
-          ))}
-        </div>
-      </div>
+      <SelectedDaysOverview 
+        dates={dates} 
+        primaryDocumentDay={primaryDocumentDay} 
+      />
 
       <Form form={form} layout="vertical">
-        <Form.Item
-          label="Entry Type"
-          name="entryType"
-          rules={[{ required: true, message: 'Please select entry type' }]}
-        >
-          <Select
-            placeholder="Select entry type for all days"
-            onChange={handleEntryTypeChange}
-            options={mainEntryTypeOptions}
-          />
-        </Form.Item>
+        {/* Shared Entry Type Selector */}
+        <SharedEntryTypeSelector
+          form={form}
+          entryType={entryType}
+          showOthersDropdown={showOthersDropdown}
+          onEntryTypeChange={handleEntryTypeChange}
+          allowBulkSpecificTypes={true}
+        />
 
-        {/* Others Entry Type Dropdown */}
-        {showOthersDropdown && (
-          <Form.Item
-            label="Select Leave Type"
-            name="othersEntryType"
-            rules={[{ required: true, message: 'Please select a leave type' }]}
-          >
-            <Select
-              placeholder="Select specific leave type"
-              onChange={handleOthersEntryTypeChange}
-              options={othersEntryTypeOptions}
-            />
-          </Form.Item>
-        )}
-
-        {/* Half Day Period Selection */}
-        {entryType && isHalfDayType(entryType) && (
-          <Form.Item
-            label="Half Day Period"
-            name="halfDayPeriod"
-            rules={[{ required: true, message: 'Please select AM or PM' }]}
-          >
-            <Radio.Group>
-              <Radio value="AM">AM (Morning)</Radio>
-              <Radio value="PM">PM (Afternoon)</Radio>
-            </Radio.Group>
-          </Form.Item>
-        )}
-
-        {/* Working Hours Selection */}         
+        {/* Shared Working Hours Section */}
         {entryType === 'working_hours' && (
-          <>
-            <Form.Item label="Working Hours Preset">
-              <WorkingHoursSelector
-                customHoursList={customHoursList}
-                selectedHoursId={selectedHoursId}
-                onHoursChange={setSelectedHoursId}
-                onAddCustomHours={onAddCustomHours}
-                onRemoveCustomHours={onRemoveCustomHours}
-                form={form}
-              />
-            </Form.Item>
-            <Form.Item name="startTime" hidden>
-              <input type="hidden" />
-            </Form.Item>
-            <Form.Item name="endTime" hidden>
-              <input type="hidden" />
-            </Form.Item>
-          </>
+          <SharedWorkingHoursSection
+            customHoursList={customHoursList}
+            selectedHoursId={selectedHoursId}
+            setSelectedHoursId={setSelectedHoursId}
+            onAddCustomHours={onAddCustomHours}
+            onRemoveCustomHours={onRemoveCustomHours}
+            form={form}
+            defaultHours={defaultHours}
+          />
         )}
 
-        {/* Supporting Documents for applicable leave types */}
-        {entryType && requiresDocuments(entryType) && (
+        {/* Shared Documents Section */}
+        {entryType && entryTypeConfig.requiresDocuments(entryType) && (
           <>
             <Divider>Document Management</Divider>
-            <Form.Item label="Primary Document Day">
-              <Select
-                value={primaryDocumentDay}
-                onChange={setPrimaryDocumentDay}
-                placeholder="Select which day will hold the supporting documents"
-              >
-                {dates.map(date => (
-                  <Select.Option key={date} value={date}>
-                    {dayjs(date).format('dddd, MMM DD, YYYY')}
-                  </Select.Option>
-                ))}
-              </Select>
-              <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: 4 }}>
-                Other days will automatically reference this day's documents
-              </Text>
-            </Form.Item>
+            <PrimaryDocumentSelector
+              dates={dates}
+              primaryDocumentDay={primaryDocumentDay}
+              setPrimaryDocumentDay={setPrimaryDocumentDay}
+            />
 
             {primaryDocumentDay && (
-              <Form.Item 
-                label="Supporting Documents" 
-                extra="Upload documents for the primary day. Other selected days will reference these documents."
-              >
-                <SupportingDocuments
-                  fileList={fileList}
-                  onChange={handleDocumentsChange}
-                  required={true}
-                  helpText={`Upload supporting documents for ${entryType.replace(/_/g, ' ')} (PDF, JPG, PNG, DOC - Max 5MB each)`}
-                  uploadText="Click or drag file to this area to upload"
-                  hintText="Documents will be linked to all selected days"
-                />
-              </Form.Item>
+              <SharedDocumentsSection
+                entryType={entryType}
+                fileList={fileList}
+                setFileList={setFileList}
+                helpText="Documents will be linked to all selected days"
+                isBulkMode={true}
+              />
             )}
           </>
         )}
 
         {/* Individual Day Configuration */}
-        <Divider>
-          Individual Day Configuration
-          {entryType === 'off_in_lieu' && (
-            <Text type="secondary" style={{ fontSize: '12px', marginLeft: 8 }}>
-              (Set date earned for each day)
-            </Text>
-          )}
-        </Divider>
-        
-        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-          <List
-            size="small"
-            dataSource={dates}
-            renderItem={date => {
-              const hasEarnedDate = Boolean(individualModifications[date]?.dateEarned);
-              
-              return (
-                <List.Item style={{ 
-                  backgroundColor: entryType === 'off_in_lieu' && hasEarnedDate ? '#f6ffed' : 'transparent',
-                  borderLeft: entryType === 'off_in_lieu' && hasEarnedDate ? '3px solid #52c41a' : 'none',
-                  paddingLeft: entryType === 'off_in_lieu' && hasEarnedDate ? '12px' : '0'
-                }}>
-                  <div style={{ width: '100%' }}>
-                    <Row gutter={16} align="middle">
-                      <Col span={6}>
-                        <Text strong>{dayjs(date).format('ddd, MMM DD')}</Text>
-                        {date === primaryDocumentDay && (
-                          <Tag color="gold" size="small" style={{ marginLeft: 8 }}>Primary</Tag>
-                        )}
-                        {entryType === 'off_in_lieu' && hasEarnedDate && (
-                          <Tag color="green" size="small" style={{ marginLeft: 4 }}>✓</Tag>
-                        )}
-                      </Col>
-                      <Col span={18}>
-                        <Input
-                          placeholder="Additional remarks for this specific day"
-                          size="small"
-                          value={individualModifications[date]?.notes || ''}
-                          onChange={(e) => handleIndividualModification(date, 'notes', e.target.value)}
-                        />
-                      </Col>
-                    </Row>
-
-                    {/* Off in Lieu Date Earned - Required for each day */}
-                    {entryType === 'off_in_lieu' && (
-                      <Row style={{ marginTop: 12 }}>
-                        <Col span={24}>
-                          <div style={{ 
-                            padding: '12px', 
-                            backgroundColor: '#fafafa', 
-                            borderRadius: '6px',
-                            border: hasEarnedDate ? '1px solid #d9f7be' : '1px solid #ffccc7'
-                          }}>
-                            <Text strong style={{ fontSize: '13px', display: 'block', marginBottom: 8 }}>
-                              Date Earned for {dayjs(date).format('MMM DD')}:
-                            </Text>
-                            <OffInLieuSelector
-                              value={individualModifications[date]?.dateEarned}
-                              onChange={(earnedDate) => handleIndividualDateEarnedChange(date, earnedDate)}
-                              form={form}
-                            />
-                          </div>
-                        </Col>
-                      </Row>
-                    )}
-                  </div>
-                </List.Item>
-              );
-            }}
-          />
-        </div>
+        <Divider>Individual Day Configuration</Divider>
+        <IndividualDaysList
+          dates={dates}
+          entryType={entryType}
+          individualModifications={individualModifications}
+          onIndividualModification={handleIndividualModification}
+          primaryDocumentDay={primaryDocumentDay}
+        />
 
         {/* Off in Lieu Progress Alert */}
         {entryType === 'off_in_lieu' && offInLieuStats && (
-          <Alert
-            type={offInLieuStats.remaining === 0 ? 'success' : 'warning'}
-            message={`Off in Lieu Progress: ${offInLieuStats.completed}/${offInLieuStats.total} days completed`}
-            description={
-              offInLieuStats.remaining > 0 
-                ? `Please set date earned for ${offInLieuStats.remaining} remaining day(s)`
-                : 'All days have date earned set - ready to submit!'
-            }
-            style={{ marginTop: 16 }}
-          />
+          <OffInLieuProgressAlert stats={offInLieuStats} />
         )}
 
         <Form.Item label="General Notes" name="notes">
@@ -521,5 +236,145 @@ function BulkSelectionModal({
     </Modal>
   );
 }
+
+// Reusable sub-components for bulk operations
+
+const SelectedDaysOverview = ({ dates, primaryDocumentDay }) => (
+  <div style={{ marginBottom: 20, padding: 12, backgroundColor: '#fffaedff', borderRadius: 6 }}>
+    <Text strong>Selected Days: </Text>
+    <div style={{ marginTop: 8 }}>
+      {dates.map(date => (
+        <Tag 
+          key={date} 
+          color={date === primaryDocumentDay ? 'gold' : 'blue'}
+          style={{ margin: '2px 4px 2px 0' }}
+        >
+          {dayjs(date).format('MMM DD')}
+          {date === primaryDocumentDay && ' (Primary)'}
+        </Tag>
+      ))}
+    </div>
+  </div>
+);
+
+const PrimaryDocumentSelector = ({ dates, primaryDocumentDay, setPrimaryDocumentDay }) => (
+  <Form.Item label="Primary Document Day">
+    <Select
+      value={primaryDocumentDay}
+      onChange={setPrimaryDocumentDay}
+      placeholder="Select which day will hold the supporting documents"
+    >
+      {dates.map(date => (
+        <Select.Option key={date} value={date}>
+          {dayjs(date).format('dddd, MMM DD, YYYY')}
+        </Select.Option>
+      ))}
+    </Select>
+    <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: 4 }}>
+      Other days will automatically reference this day's documents
+    </Text>
+  </Form.Item>
+);
+
+const IndividualDaysList = ({ 
+  dates, 
+  entryType, 
+  individualModifications, 
+  onIndividualModification,
+  primaryDocumentDay 
+}) => (
+  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+    <List
+      size="small"
+      dataSource={dates}
+      renderItem={date => {
+        const hasEarnedDate = Boolean(individualModifications[date]?.dateEarned);
+        
+        return (
+          <List.Item style={{ 
+            backgroundColor: entryType === 'off_in_lieu' && hasEarnedDate ? '#f6ffed' : 'transparent',
+            borderLeft: entryType === 'off_in_lieu' && hasEarnedDate ? '3px solid #52c41a' : 'none',
+            paddingLeft: entryType === 'off_in_lieu' && hasEarnedDate ? '12px' : '0'
+          }}>
+            <IndividualDayItem
+              date={date}
+              entryType={entryType}
+              individualModifications={individualModifications}
+              onIndividualModification={onIndividualModification}
+              primaryDocumentDay={primaryDocumentDay}
+              hasEarnedDate={hasEarnedDate}
+            />
+          </List.Item>
+        );
+      }}
+    />
+  </div>
+);
+
+const IndividualDayItem = ({ 
+  date, 
+  entryType, 
+  individualModifications, 
+  onIndividualModification,
+  primaryDocumentDay,
+  hasEarnedDate 
+}) => (
+  <div style={{ width: '100%' }}>
+    <Row gutter={16} align="middle">
+      <Col span={6}>
+        <Text strong>{dayjs(date).format('ddd, MMM DD')}</Text>
+        {date === primaryDocumentDay && (
+          <Tag color="gold" size="small" style={{ marginLeft: 8 }}>Primary</Tag>
+        )}
+        {entryType === 'off_in_lieu' && hasEarnedDate && (
+          <Tag color="green" size="small" style={{ marginLeft: 4 }}>✓</Tag>
+        )}
+      </Col>
+      <Col span={18}>
+        <Input
+          placeholder="Additional remarks for this specific day"
+          size="small"
+          value={individualModifications[date]?.notes || ''}
+          onChange={(e) => onIndividualModification(date, 'notes', e.target.value)}
+        />
+      </Col>
+    </Row>
+
+    {/* Off in Lieu Date Earned */}
+    {entryType === 'off_in_lieu' && (
+      <Row style={{ marginTop: 12 }}>
+        <Col span={24}>
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: '#fafafa', 
+            borderRadius: '6px',
+            border: hasEarnedDate ? '1px solid #d9f7be' : '1px solid #ffccc7'
+          }}>
+            <Text strong style={{ fontSize: '13px', display: 'block', marginBottom: 8 }}>
+              Date Earned for {dayjs(date).format('MMM DD')}:
+            </Text>
+            <OffInLieuSelector
+              value={individualModifications[date]?.dateEarned}
+              onChange={(earnedDate) => onIndividualModification(date, 'dateEarned', earnedDate)}
+            />
+          </div>
+        </Col>
+      </Row>
+    )}
+  </div>
+);
+
+const OffInLieuProgressAlert = ({ stats }) => (
+  <Alert
+    type={stats.remaining === 0 ? 'success' : 'warning'}
+    message={`Off in Lieu Progress: ${stats.completed}/${stats.total} days completed`}
+    description={
+      stats.remaining > 0 
+        ? `Please set date earned for ${stats.remaining} remaining day(s)`
+        : 'All days have date earned set - ready to submit!'
+    }
+    style={{ marginTop: 16 }}
+  />
+);
 
 export default BulkSelectionModal;

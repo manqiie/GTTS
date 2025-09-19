@@ -8,13 +8,12 @@ import { CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 /**
- * OffInLieuSelector Component
- * Simplified version with text input and calendar icon
+ * OffInLieuSelector Component - Fixed for bulk mode
  */
 function OffInLieuSelector({ 
   value, 
   onChange, 
-  form,
+  form = null, // Made optional for bulk mode
   disabled = false 
 }) {
   const [inputValue, setInputValue] = useState('');
@@ -27,6 +26,8 @@ function OffInLieuSelector({
       if (parsedDate.isValid()) {
         setInputValue(parsedDate.format('DD/MM/YYYY'));
       }
+    } else {
+      setInputValue('');
     }
   }, [value]);
 
@@ -58,12 +59,22 @@ function OffInLieuSelector({
       
       const formattedDate = parsedDate.format('YYYY-MM-DD');
       
-      // Update form field
-      form.setFieldValue('dateEarned', formattedDate);
+      // Update form field only if form is provided (for single day mode)
+      if (form) {
+        form.setFieldValue('dateEarned', formattedDate);
+      }
       
-      // Call parent onChange
+      // Always call parent onChange
       if (onChange) {
         onChange(formattedDate);
+      }
+    } else {
+      // Clear the value
+      if (form) {
+        form.setFieldValue('dateEarned', null);
+      }
+      if (onChange) {
+        onChange(null);
       }
     }
   };
@@ -79,10 +90,12 @@ function OffInLieuSelector({
       setInputValue(formattedInput);
       setShowDatePicker(false);
       
-      // Update form field
-      form.setFieldValue('dateEarned', formattedDate);
+      // Update form field only if form is provided
+      if (form) {
+        form.setFieldValue('dateEarned', formattedDate);
+      }
       
-      // Call parent onChange
+      // Always call parent onChange
       if (onChange) {
         onChange(formattedDate);
       }
@@ -93,7 +106,9 @@ function OffInLieuSelector({
    * Handle calendar icon click
    */
   const handleCalendarClick = () => {
-    setShowDatePicker(!showDatePicker);
+    if (!disabled) {
+      setShowDatePicker(!showDatePicker);
+    }
   };
 
   return (
@@ -102,17 +117,21 @@ function OffInLieuSelector({
         value={inputValue}
         onChange={handleInputChange}
         onBlur={handleInputBlur}
+        onPressEnter={handleInputBlur}
         placeholder="DD/MM/YYYY"
         disabled={disabled}
         suffix={
           <CalendarOutlined 
-            style={{ cursor: 'pointer', color: '#1890ff' }}
+            style={{ 
+              cursor: disabled ? 'not-allowed' : 'pointer', 
+              color: disabled ? '#d9d9d9' : '#1890ff' 
+            }}
             onClick={handleCalendarClick}
           />
         }
       />
       
-      {showDatePicker && (
+      {showDatePicker && !disabled && (
         <div style={{ 
           position: 'absolute', 
           top: '100%', 

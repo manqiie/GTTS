@@ -250,7 +250,7 @@ export const dayEntryUtils = {
   },
 
   /**
-   * Validate bulk entry form data
+   * Validate bulk entry form data - FIXED VERSION
    */
   validateBulkEntryData(formData, entryType, fileList, individualModifications, dates) {
     const errors = [];
@@ -301,28 +301,29 @@ export const dayEntryUtils = {
       errors.push('Supporting documents are required for this leave type');
     }
 
-    // Off in Lieu validation - check all days have date earned
+    // Off in Lieu validation - FIXED
     if (entryType === 'off_in_lieu') {
-      const daysWithoutEarnedDate = dates.filter(date => 
-        !individualModifications[date]?.dateEarned
-      );
+      const daysWithoutEarnedDate = dates.filter(date => {
+        const modification = individualModifications[date];
+        return !modification || !modification.dateEarned;
+      });
       
       if (daysWithoutEarnedDate.length > 0) {
         errors.push(`Please set date earned for all ${dates.length} days. ${daysWithoutEarnedDate.length} day(s) still need earned dates.`);
       }
 
-      // Validate each earned date
+      // Validate each earned date - FIXED
       dates.forEach(date => {
-        const earnedDate = individualModifications[date]?.dateEarned;
-        if (earnedDate) {
-          const earned = dayjs(earnedDate);
+        const modification = individualModifications[date];
+        if (modification && modification.dateEarned) {
+          const earnedDate = dayjs(modification.dateEarned);
           const entryDate = dayjs(date);
           
-          if (earned.isAfter(entryDate)) {
+          if (earnedDate.isAfter(entryDate)) {
             errors.push(`Date earned for ${dayjs(date).format('MMM DD')} cannot be after the Off in Lieu date`);
           }
 
-          if (earned.isAfter(dayjs().endOf('day'))) {
+          if (earnedDate.isAfter(dayjs().endOf('day'))) {
             errors.push(`Date earned for ${dayjs(date).format('MMM DD')} cannot be in the future`);
           }
         }

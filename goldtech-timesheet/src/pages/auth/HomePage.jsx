@@ -9,8 +9,8 @@ import {
 import { 
   UserOutlined
 } from '@ant-design/icons';
-import PageHeader from '../components/Common/PageHeader';
-import { useAuth } from '../contexts/AuthContext';
+import PageHeader from '../../components/Common/PageHeader';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 

@@ -5,14 +5,14 @@ import { Layout, ConfigProvider } from 'antd';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import Sidebar from './components/Sidebar';
-import LoginPage from './pages/LoginPage';
-import HomePage from './pages/HomePage';
-import ProfilePage from './pages/ProfilePage';
-import TimesheetPage from './pages/TimesheetPage';
-import TimesheetHistoryPage from './pages/TimesheetHistoryPage'; // New import
-import EmployeeManagementPage from './pages/EmployeeManagementPage';
-import CreateEmployeePage from './pages/CreateEmployeePage';
-import EditEmployeePage from './pages/EditEmployeePage';
+import LoginPage from './pages/auth/LoginPage';
+import HomePage from './pages/auth/HomePage';
+import ProfilePage from './pages/auth/ProfilePage';
+import TimesheetPage from './pages/timesheet/TimesheetPage';
+import TimesheetHistoryPage from './pages/timesheet/TimesheetHistoryPage'; // New import
+import EmployeeManagementPage from './pages/UserManagement/EmployeeManagementPage';
+import CreateEmployeePage from './pages/UserManagement/CreateEmployeePage';
+import EditEmployeePage from './pages/UserManagement/EditEmployeePage';
 import TimesheetManagementPage from './pages/TimesheetManagementPage';
 import ApproveTimesheetPage from './pages/ApproveTimesheetPage';
 import TimesheetReviewPage from './pages/TimesheetReviewPage';

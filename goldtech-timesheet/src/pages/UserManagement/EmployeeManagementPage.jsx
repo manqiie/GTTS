@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, Select, Button, Space, message } from 'antd';
 import { PlusOutlined, SearchOutlined, ClearOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import PageHeader from '../components/Common/PageHeader';
-import EmployeeTable from '../components/Employee/EmployeeTable';
-import EmployeeViewModal from '../components/Employee/EmployeeViewModal';
-import { useEmployeeStore } from '../hooks/useEmployeeStore';
-import apiService from '../services/apiService';
+import PageHeader from '../../components/Common/PageHeader';
+import EmployeeTable from '../../components/Employee/EmployeeTable';
+import EmployeeViewModal from '../../components/Employee/EmployeeViewModal';
+import { useEmployeeStore } from '../../hooks/useEmployeeStore';
+import apiService from '../../services/apiService';
 
 const { Search } = Input;
 

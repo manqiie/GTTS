@@ -3,9 +3,9 @@ import React from 'react';
 import { Form, Button, message } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import PageHeader from '../components/Common/PageHeader';
-import EmployeeForm from '../components/Employee/EmployeeForm';
-import { useEmployeeStore } from '../hooks/useEmployeeStore';
+import PageHeader from '../../components/Common/PageHeader';
+import EmployeeForm from '../../components/Employee/EmployeeForm';
+import { useEmployeeStore } from '../../hooks/useEmployeeStore';
 
 function CreateEmployeePage() {
   const [form] = Form.useForm();

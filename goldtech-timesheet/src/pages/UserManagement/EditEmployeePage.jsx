@@ -4,9 +4,9 @@ import { Form, Button, message, Spin, Alert } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import PageHeader from '../components/Common/PageHeader';
-import EmployeeForm from '../components/Employee/EmployeeForm';
-import { useEmployeeStore } from '../hooks/useEmployeeStore';
+import PageHeader from '../../components/Common/PageHeader';
+import EmployeeForm from '../../components/Employee/EmployeeForm';
+import { useEmployeeStore } from '../../hooks/useEmployeeStore';
 
 function EditEmployeePage() {
   const [form] = Form.useForm();

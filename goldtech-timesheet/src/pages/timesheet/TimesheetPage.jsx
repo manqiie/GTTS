@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Space, Button, message, Spin, Alert } from 'antd';
 import { SaveOutlined, SendOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import TimesheetHeader from '../components/Timesheet/TimesheetHeader';
-import TimesheetCalendar from '../components/Timesheet/TimesheetCalendar';
-import DayEntryModal from '../components/Timesheet/DayEntryModal';
-import BulkSelectionModal from '../components/Timesheet/BulkSelectionModal';
-import { useTimesheetStore } from '../hooks/useTimesheetStore';
+import TimesheetHeader from '../../components/Timesheet/TimesheetHeader';
+import TimesheetCalendar from '../../components/Timesheet/TimesheetCalendar';
+import DayEntryModal from '../../components/Timesheet/DayEntryModal';
+import BulkSelectionModal from '../../components/Timesheet/BulkSelectionModal';
+import { useTimesheetStore } from '../../hooks/useTimesheetStore';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -449,9 +449,7 @@ function TimesheetPage() {
             border: '1px solid #91d5ff',
             textAlign: 'center' 
           }}>
-            <span style={{ color: '#1890ff', fontSize: '14px' }}>
-              📅 You're viewing a historical timesheet. Click on any day to see the details.
-            </span>
+            
           </div>
         )}
 

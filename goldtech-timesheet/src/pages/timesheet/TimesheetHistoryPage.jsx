@@ -4,7 +4,7 @@ import { Card, Table, Tag, Button, Tooltip, Space, Row, Col, Spin, message } fro
 import { EyeOutlined, ReloadOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import PageHeader from '../components/Common/PageHeader';
+import PageHeader from '../../components/Common/PageHeader';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 

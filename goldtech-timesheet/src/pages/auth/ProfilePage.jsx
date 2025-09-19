@@ -29,9 +29,9 @@ import {
   UserOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import PageHeader from '../components/Common/PageHeader';
-import { useAuth } from '../contexts/AuthContext';
-import apiService from '../services/apiService';
+import PageHeader from '../../components/Common/PageHeader';
+import { useAuth } from '../../contexts/AuthContext';
+import apiService from '../../services/apiService';
 
 const { Title, Text } = Typography;
 

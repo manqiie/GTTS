@@ -1,4 +1,4 @@
-// src/pages/ProfilePage.jsx - Updated to use real API data
+// src/pages/ProfilePage.jsx - FIXED supervisor display
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -126,7 +126,7 @@ function ProfilePage() {
     return user.roles.map(role => {
       const roleConfig = {
         employee: { color: 'blue', text: 'Employee' },
-        manager: { color: 'orange', text: 'Manager' },
+        supervisor: { color: 'orange', text: 'Supervisor' },
         admin: { color: 'red', text: 'Administrator' }
       };
       return roleConfig[role.name] || { color: 'default', text: role.description || role.name };
@@ -145,6 +145,12 @@ function ProfilePage() {
       return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     }
     return status === 'ACTIVE' ? 'Active' : 'Inactive';
+  };
+
+  // FIXED: Get supervisor name with fallbacks
+  const getSupervisorName = () => {
+    // Try multiple fields for backward compatibility
+    return user.supervisorName || user.supervisor_name || 'Not assigned';
   };
 
   const roleDisplays = getRoleDisplay();
@@ -167,7 +173,6 @@ function ProfilePage() {
             >
               Change Password
             </Button>
-          
           </Space>
         }
       />
@@ -227,7 +232,7 @@ function ProfilePage() {
             
             <Descriptions column={1} size="middle" labelStyle={{ fontWeight: 'bold', width: '140px' }}>
               <Descriptions.Item label="Employee ID">
-                <Text strong>{user.employeeId || 'N/A'}</Text>
+                <Text strong>{user.employeeId || user.employee_id || 'N/A'}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Full Name">
                 {user.fullName || user.name}
@@ -259,12 +264,13 @@ function ProfilePage() {
                 {user.department || 'N/A'}
               </Descriptions.Item>
               <Descriptions.Item label="Project Site">
-                {user.projectSite || 'Not assigned'}
+                {user.projectSite || user.project_site || 'Not assigned'}
               </Descriptions.Item>
               <Descriptions.Item label={<Space><TeamOutlined />Supervisor</Space>}>
-                {user.managerName || 'Not assigned'}
+                <Text strong style={{ color: getSupervisorName() === 'Not assigned' ? '#999' : '#262626' }}>
+                  {getSupervisorName()}
+                </Text>
               </Descriptions.Item>
-            
             </Descriptions>
           </Col>
         </Row>

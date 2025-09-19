@@ -83,47 +83,64 @@ export function useEmployeeStore() {
     }
   };
 
-  const updateEmployee = async (id, updates) => {
-    try {
-      // Transform frontend updates to backend format
-      const backendUpdates = {
-        employeeId: updates.employee_id || null,
-        email: updates.email,
-        fullName: updates.full_name,
-        phone: updates.phone || null,
-        position: updates.position,
-        department: updates.department,
-        projectSite: updates.project_site || null,
-        company: updates.company || null,
-        joinDate: updates.join_date,
-        managerId: updates.manager_id || null,
-        roles: updates.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
-        status: updates.status
-      };
+const updateEmployee = async (id, updates) => {
+  try {
+    console.log('useEmployeeStore.updateEmployee called');
+    console.log('ID:', id);
+    console.log('Updates received:', updates);
+    console.log('Supervisor ID in updates:', updates.supervisor_id);
 
-      const response = await apiService.updateUser(id, backendUpdates);
+    // Transform frontend updates to backend format
+    const backendUpdates = {
+      employeeId: updates.employee_id || null,
+      email: updates.email,
+      fullName: updates.full_name,
+      phone: updates.phone || null,
+      position: updates.position,
+      department: updates.department,
+      projectSite: updates.project_site || null,
+      company: updates.company || null,
+      joinDate: updates.join_date,
+      
+      // CRITICAL: Map supervisor_id properly
+      supervisorId: updates.supervisor_id || null,
+      
+      roles: updates.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
+      status: updates.status
+    };
 
-      if (response.success && response.data) {
-        const transformedUser = apiService.transformUserData(response.data);
-        
-        // Update local state
-        setEmployees(prev => 
-          prev.map(emp => emp.id === id ? transformedUser : emp)
-        );
-        
-        message.success(`User ${transformedUser.full_name} updated successfully!`);
-        return transformedUser;
-      } else {
-        const errorMsg = response.message || 'Failed to update user';
-        message.error(errorMsg);
-        throw new Error(errorMsg);
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
-      message.error('Failed to update user: ' + error.message);
-      throw error;
+    console.log('Backend updates being sent:', backendUpdates);
+    console.log('Supervisor ID being sent to backend:', backendUpdates.supervisorId);
+
+    const response = await apiService.updateUser(id, backendUpdates);
+    console.log('API response:', response);
+
+    if (response.success && response.data) {
+      const transformedUser = apiService.transformUserData(response.data);
+      console.log('Transformed user data:', transformedUser);
+      console.log('Transformed supervisor fields:', {
+        supervisor_id: transformedUser.supervisor_id,
+        supervisor_name: transformedUser.supervisor_name
+      });
+      
+      // Update local state
+      setEmployees(prev => 
+        prev.map(emp => emp.id === id ? transformedUser : emp)
+      );
+      
+      message.success(`User ${transformedUser.full_name} updated successfully!`);
+      return transformedUser;
+    } else {
+      const errorMsg = response.message || 'Failed to update user';
+      message.error(errorMsg);
+      throw new Error(errorMsg);
     }
-  };
+  } catch (error) {
+    console.error('Error updating user:', error);
+    message.error('Failed to update user: ' + error.message);
+    throw error;
+  }
+};
 
   const deleteEmployee = async (id) => {
     try {

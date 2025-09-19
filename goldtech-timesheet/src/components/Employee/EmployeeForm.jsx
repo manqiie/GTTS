@@ -1,6 +1,6 @@
-// EmployeeForm.jsx - Clean and simple version with text inputs
+// EmployeeForm.jsx - FINAL FIXED version with working supervisor editing
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete } from 'antd';
+import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import apiService from '../../services/apiService';
@@ -32,15 +32,36 @@ function EmployeeForm({
     filterSupervisorOptions(supervisorSearchValue);
   }, [supervisorSearchValue, availableSupervisors]);
 
-  // Set initial supervisor search value when editing
+  // FIXED: Set initial supervisor search value when editing with better sync
   useEffect(() => {
-    if (initialValues && initialValues.supervisor_id) {
-      const supervisor = availableSupervisors.find(s => s.id === initialValues.supervisor_id);
-      if (supervisor) {
-        setSupervisorSearchValue(`${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`);
+    console.log('Initial values changed:', initialValues);
+    console.log('Available supervisors:', availableSupervisors);
+    
+    if (initialValues && availableSupervisors.length > 0) {
+      const supervisorId = initialValues.supervisor_id;
+      console.log('Looking for supervisor with ID:', supervisorId);
+      
+      if (supervisorId) {
+        const supervisor = availableSupervisors.find(s => s.id === supervisorId);
+        console.log('Found supervisor:', supervisor);
+        
+        if (supervisor) {
+          const displayValue = `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`;
+          setSupervisorSearchValue(displayValue);
+          
+          // CRITICAL: Force update the form field value
+          setTimeout(() => {
+            form.setFieldValue('supervisor_id', supervisor.id);
+            console.log('Form field supervisor_id set to:', supervisor.id);
+          }, 100);
+        }
+      } else {
+        // No supervisor assigned
+        setSupervisorSearchValue('');
+        form.setFieldValue('supervisor_id', null);
       }
     }
-  }, [initialValues, availableSupervisors]);
+  }, [initialValues, availableSupervisors, form]);
 
   const loadRoles = async () => {
     setLoadingRoles(true);
@@ -50,7 +71,6 @@ function EmployeeForm({
         setAvailableRoles(response.data);
       } else {
         console.error('Failed to load roles:', response.message);
-        // Fallback to default roles
         setAvailableRoles([
           { id: 1, name: 'admin', description: 'Administrator' },
           { id: 2, name: 'supervisor', description: 'Supervisor' },
@@ -80,6 +100,7 @@ function EmployeeForm({
           employee_id: supervisor.employeeId || supervisor.employee_id
         }));
         setAvailableSupervisors(supervisors);
+        console.log('Loaded supervisors:', supervisors);
       } else {
         console.error('Failed to load supervisors:', response.message);
         setAvailableSupervisors([]);
@@ -134,31 +155,79 @@ function EmployeeForm({
   };
 
   const handleSupervisorSelect = (value, option) => {
+    console.log('Supervisor selected:', value, option);
     if (option && option.supervisorId) {
       form.setFieldValue('supervisor_id', option.supervisorId);
       setSupervisorSearchValue(value);
+      console.log('Set supervisor_id to:', option.supervisorId);
+      
+      // Show success message
+      const supervisor = availableSupervisors.find(s => s.id === option.supervisorId);
+      if (supervisor) {
+        message.success(`Selected supervisor: ${supervisor.full_name}`);
+      }
     }
   };
 
   const handleSupervisorSearch = (value) => {
+    console.log('Supervisor search:', value);
     setSupervisorSearchValue(value);
     
+    if (value === '') {
+      // Clear supervisor if search is empty
+      form.setFieldValue('supervisor_id', null);
+      console.log('Cleared supervisor_id');
+      return;
+    }
+    
+    // Check if the value matches an existing supervisor
     const matchedSupervisor = availableSupervisors.find(supervisor => 
       `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})` === value
     );
     
-    if (!matchedSupervisor) {
-      form.setFieldValue('supervisor_id', null);
+    if (matchedSupervisor) {
+      form.setFieldValue('supervisor_id', matchedSupervisor.id);
+      console.log('Matched supervisor, set supervisor_id to:', matchedSupervisor.id);
     }
+    // Don't clear the ID for partial matches - user might still be typing
+  };
+
+  const handleSupervisorClear = () => {
+    console.log('Supervisor cleared');
+    setSupervisorSearchValue('');
+    form.setFieldValue('supervisor_id', null);
+    message.info('Supervisor cleared');
+  };
+
+  // ADDED: Custom form finish handler to debug values
+  const handleFormFinish = (values) => {
+    console.log('Form submitted with values:', values);
+    console.log('Supervisor ID in form:', values.supervisor_id);
+    
+    if (!values.supervisor_id && supervisorSearchValue && supervisorSearchValue.trim()) {
+      // Try to find supervisor by search value
+      const supervisor = availableSupervisors.find(s => 
+        `${s.full_name} (${s.employee_id || 'No ID'})` === supervisorSearchValue
+      );
+      if (supervisor) {
+        values.supervisor_id = supervisor.id;
+        console.log('Fixed supervisor_id in form submission:', supervisor.id);
+      }
+    }
+    
+    onFinish(values);
   };
 
   return (
     <Form
       form={form}
       layout="vertical"
-      onFinish={onFinish}
+      onFinish={handleFormFinish}
       initialValues={initialValues}
       disabled={disabled}
+      onValuesChange={(changedValues, allValues) => {
+        console.log('Form values changed:', changedValues, allValues);
+      }}
     >
       {/* Basic Information */}
       <Card size="small" style={{ marginBottom: 24 }}>
@@ -187,8 +256,6 @@ function EmployeeForm({
               <Input placeholder="John Smith" />
             </Form.Item>
           </Col>
-
-
         </Row>
 
         <Row gutter={24}>
@@ -280,7 +347,6 @@ function EmployeeForm({
             </Form.Item>
           </Col>
         </Row>
-
       </Card>
 
       {/* Work Information */}
@@ -338,14 +404,14 @@ function EmployeeForm({
           <Col xs={24} md={12}>
             <Form.Item
               label="Supervisor"
-              name="supervisor_search"
-              help="Type to search for supervisor by name or ID"
+              help="Type to search for supervisor by name or ID. Leave empty if no supervisor."
             >
               <AutoComplete
                 value={supervisorSearchValue}
                 options={supervisorOptions}
                 onSelect={handleSupervisorSelect}
                 onSearch={handleSupervisorSearch}
+                onClear={handleSupervisorClear}
                 placeholder="Type supervisor name to search..."
                 allowClear
                 loading={loadingSupervisors}
@@ -355,12 +421,13 @@ function EmployeeForm({
                   <span style={{ color: '#ff4d4f' }}>Supervisor doesn't exist</span> : 
                   <span style={{ color: '#999' }}>Start typing to search supervisors</span>
                 }
+                style={{ width: '100%' }}
               />
             </Form.Item>
             
-            {/* Hidden field to store actual supervisor_id */}
+            {/* CRITICAL: Hidden field to store actual supervisor_id */}
             <Form.Item name="supervisor_id" hidden>
-              <Input type="hidden" />
+              <Input />
             </Form.Item>
           </Col>
 

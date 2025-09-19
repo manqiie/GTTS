@@ -198,44 +198,50 @@ class ApiService {
     return this.get('/users/filter-options/roles', params);
   }
 
-  // Transform backend user data to frontend format
-  transformUserData(backendUser) {
-    return {
-      id: backendUser.id,
-      employee_id: backendUser.employeeId,
-      email: backendUser.email,
-      full_name: backendUser.fullName,
-      phone: backendUser.phone,
-      position: backendUser.position,
-      department: backendUser.department,
-      project_site: backendUser.projectSite,
-      join_date: backendUser.joinDate,
-      supervisor_name: backendUser.supervisorName, // Changed from managerName
-      supervisor_id: backendUser.supervisorId,
-      status: backendUser.status,
-      roles: backendUser.roles || [],
-      created_at: backendUser.createdAt,
-      updated_at: backendUser.updatedAt,
-      last_login_at: backendUser.lastLoginAt
-    };
-  }
+// Transform backend user data to frontend format
+transformUserData(backendUser) {
+  return {
+    id: backendUser.id,
+    employee_id: backendUser.employeeId,
+    email: backendUser.email,
+    full_name: backendUser.fullName,
+    phone: backendUser.phone,
+    position: backendUser.position,
+    department: backendUser.department,
+    project_site: backendUser.projectSite,
+    join_date: backendUser.joinDate,
+    
+    // CLEAN: Only supervisor fields - no manager fields
+    supervisor_id: backendUser.supervisorId, 
+    supervisor_name: backendUser.supervisorName,
+    
+    status: backendUser.status,
+    roles: backendUser.roles || [],
+    created_at: backendUser.createdAt,
+    updated_at: backendUser.updatedAt,
+    last_login_at: backendUser.lastLoginAt
+  };
+}
 
-  // Transform frontend user data to backend format
-  transformToBackendFormat(frontendUser) {
-    return {
-      employeeId: frontendUser.employee_id || null,
-      email: frontendUser.email,
-      fullName: frontendUser.full_name,
-      phone: frontendUser.phone || null,
-      position: frontendUser.position,
-      department: frontendUser.department,
-      projectSite: frontendUser.project_site || null,
-      joinDate: frontendUser.join_date,
-      supervisorId: frontendUser.supervisor_id || null, // Changed from managerId
-      roles: frontendUser.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
-      status: frontendUser.status
-    };
-  }
+// Transform frontend user data to backend format
+transformToBackendFormat(frontendUser) {
+  return {
+    employeeId: frontendUser.employee_id || null,
+    email: frontendUser.email,
+    fullName: frontendUser.full_name,
+    phone: frontendUser.phone || null,
+    position: frontendUser.position,
+    department: frontendUser.department,
+    projectSite: frontendUser.project_site || null,
+    joinDate: frontendUser.join_date,
+    
+    // CLEAN: Only supervisor field
+    supervisorId: frontendUser.supervisor_id || null,
+    
+    roles: frontendUser.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
+    status: frontendUser.status
+  };
+}
 }
 
 // Export singleton instance

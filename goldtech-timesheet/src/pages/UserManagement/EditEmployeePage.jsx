@@ -1,4 +1,4 @@
-// EditEmployeePage.jsx (keeping filename but updating for user management)
+// EditEmployeePage.jsx - DEBUG VERSION with extensive logging
 import React, { useState, useEffect } from 'react';
 import { Form, Button, message, Spin, Alert } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
@@ -19,6 +19,7 @@ function EditEmployeePage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    
     // Wait for store to finish loading before trying to get user
     if (!storeLoading) {
       loadEmployee();
@@ -26,14 +27,25 @@ function EditEmployeePage() {
   }, [id, storeLoading]);
 
   const loadEmployee = () => {
+    console.log('Loading employee with ID:', id);
     setPageLoading(true);
     setNotFound(false);
     
     try {
       const emp = getEmployee(id);
+      console.log('Raw employee data from store:', emp);
+      
       if (emp) {
         setEmployee(emp);
-        // Set form initial values with proper role ID conversion
+        
+        // DEBUG: Log all supervisor-related fields
+        console.log('Employee supervisor fields:');
+        console.log('- supervisor_id:', emp.supervisor_id);
+        console.log('- manager_id:', emp.manager_id);
+        console.log('- supervisor_name:', emp.supervisor_name);
+        console.log('- manager_name:', emp.manager_name);
+        
+        // FIXED: Set form initial values with proper supervisor handling
         const initialValues = {
           employee_id: emp.employee_id,
           email: emp.email,
@@ -44,10 +56,14 @@ function EditEmployeePage() {
           project_site: emp.project_site,
           company: emp.company,
           join_date: dayjs(emp.join_date),
-          supervisor_id: emp.supervisor_id,
-          roles: emp.roles ? emp.roles.map(role => role.id) : [], // Convert role objects to IDs
+          
+          // CRITICAL: Set supervisor_id with fallback
+          supervisor_id: emp.supervisor_id || emp.manager_id || null,
+          
+          roles: emp.roles ? emp.roles.map(role => role.id) : [],
           status: emp.status
         };
+        
         form.setFieldsValue(initialValues);
         setNotFound(false);
       } else {
@@ -65,7 +81,16 @@ function EditEmployeePage() {
 
   const handleFinish = async (values) => {
     try {
-      // Transform form values to match database structure
+      console.log('Form submission started');
+      console.log('Form values received:', values);
+      console.log('Supervisor ID from form:', values.supervisor_id);
+      
+      // Check form fields directly
+      const formValues = form.getFieldsValue();
+      console.log('Direct form field values:', formValues);
+      console.log('Direct supervisor_id field:', formValues.supervisor_id);
+      
+      // FIXED: Transform form values to match database structure
       const updateData = {
         employee_id: values.employee_id || null,
         email: values.email,
@@ -76,15 +101,25 @@ function EditEmployeePage() {
         project_site: values.project_site || null,
         company: values.company || null,
         join_date: values.join_date.format('YYYY-MM-DD'),
+        
+        // CRITICAL: Map supervisor_id properly
         supervisor_id: values.supervisor_id || null,
-        roles: values.roles, // Array of role IDs
+        
+        roles: values.roles,
         status: values.status
       };
 
-      const updatedEmployee = updateEmployee(id, updateData);
+      console.log('Update data being sent to API:', updateData);
+      console.log('Supervisor ID in update data:', updateData.supervisor_id);
+
+      const updatedEmployee = await updateEmployee(id, updateData);
+      
+      console.log('Updated employee returned from API:', updatedEmployee);
       
       if (updatedEmployee) {
         message.success(`User ${updatedEmployee.full_name} updated successfully!`);
+        
+        
         navigate('/employee-management');
       } else {
         message.error('Failed to update user');
@@ -160,6 +195,7 @@ function EditEmployeePage() {
       />
 
       <div style={{ background: '#fff', padding: 24, borderRadius: 8 }}>
+        
         <EmployeeForm
           form={form}
           initialValues={employee}

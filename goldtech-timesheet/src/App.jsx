@@ -1,4 +1,4 @@
-// src/App.jsx - Complete version with Authentication System
+// Updated App.jsx - Add history route
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout, ConfigProvider } from 'antd';
@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import TimesheetPage from './pages/TimesheetPage';
+import TimesheetHistoryPage from './pages/TimesheetHistoryPage'; // New import
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
 import CreateEmployeePage from './pages/CreateEmployeePage';
 import EditEmployeePage from './pages/EditEmployeePage';
@@ -64,7 +65,7 @@ function AppContent() {
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/timesheet" element={<TimesheetPage />} />
-                  <Route path="/history" element={<HistoryPlaceholder />} />
+                  <Route path="/history" element={<TimesheetHistoryPage />} /> {/* New route */}
                   
                   {/* Manager/Admin Routes - Timesheet Approval */}
                   <Route path="/approve" element={
@@ -124,24 +125,6 @@ function AppContent() {
 }
 
 // Placeholder components for pages not yet implemented
-const HistoryPlaceholder = () => (
-  <div style={{ 
-    padding: '50px', 
-    textAlign: 'center',
-    background: '#fff',
-    borderRadius: '8px',
-    margin: '20px 0'
-  }}>
-    <h1>Timesheet History</h1>
-    <p style={{ color: '#666', marginBottom: '24px' }}>
-      View your previous timesheet submissions and their approval status.
-    </p>
-    <p style={{ color: '#999', fontSize: '14px' }}>
-      This feature is coming soon...
-    </p>
-  </div>
-);
-
 const ClientsPlaceholder = () => (
   <div style={{ 
     padding: '50px', 

@@ -1,13 +1,11 @@
-// src/hooks/useTimesheetStore.js - Updated to use API instead of localStorage
+// src/hooks/useTimesheetStore.js - Updated with new submission rules and history
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
 /**
- * Updated useTimesheetStore Hook with API Integration
- * 
- * This hook now communicates with the backend API instead of localStorage
+ * Updated useTimesheetStore Hook with Submission Rules & History
  */
 export function useTimesheetStore(year, month) {
   const [entries, setEntries] = useState({});
@@ -15,6 +13,9 @@ export function useTimesheetStore(year, month) {
   const [defaultHours, setDefaultHoursState] = useState(null);
   const [loading, setLoading] = useState(false);
   const [timesheetStatus, setTimesheetStatus] = useState('draft');
+  const [availableMonths, setAvailableMonths] = useState([]);
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [canResubmit, setCanResubmit] = useState(false);
 
   // Get auth token from localStorage
   const getAuthToken = () => {
@@ -59,14 +60,65 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
+   * Load available months for timesheet submission
+   */
+  const loadAvailableMonths = async () => {
+    try {
+      const response = await apiRequest('/timesheets/available-months');
+      
+      if (response.success && response.data) {
+        setAvailableMonths(response.data);
+        return response.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading available months:', error);
+      message.error('Failed to load available months');
+      return [];
+    }
+  };
+
+  /**
+   * Check if timesheet can be submitted
+   */
+  const checkSubmissionEligibility = async (checkYear, checkMonth) => {
+    try {
+      const response = await apiRequest(`/timesheets/${checkYear}/${checkMonth}/can-submit`);
+      
+      if (response.success && response.data) {
+        setCanSubmit(response.data.canSubmit);
+        setCanResubmit(response.data.canResubmit);
+        return response.data;
+      }
+      
+      setCanSubmit(false);
+      setCanResubmit(false);
+      return { canSubmit: false, canResubmit: false, canPerformAction: false };
+    } catch (error) {
+      console.error('Error checking submission eligibility:', error);
+      setCanSubmit(false);
+      setCanResubmit(false);
+      return { canSubmit: false, canResubmit: false, canPerformAction: false };
+    }
+  };
+
+  /**
    * Load timesheet data from API on mount or when month changes
    */
   useEffect(() => {
     if (year && month) {
       loadTimesheetData();
       loadWorkingHoursPresets();
+      checkSubmissionEligibility(year, month);
     }
   }, [year, month]);
+
+  /**
+   * Load available months on hook initialization
+   */
+  useEffect(() => {
+    loadAvailableMonths();
+  }, []);
 
   /**
    * Load timesheet entries for current month
@@ -188,25 +240,41 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Submit timesheet for approval
+   * Submit timesheet for approval (with enhanced validation)
    */
   const submitTimesheet = async () => {
     setLoading(true);
     try {
+      // Check if submission is allowed
+      const eligibility = await checkSubmissionEligibility(year, month);
+      
+      if (!eligibility.canPerformAction) {
+        const today = new Date();
+        if (today.getDate() > 10) {
+          throw new Error('Previous month timesheet can only be submitted within the first 10 days of the current month');
+        } else {
+          throw new Error('This timesheet cannot be submitted at this time');
+        }
+      }
+
       const response = await apiRequest(`/timesheets/${year}/${month}/submit`, {
         method: 'POST'
       });
 
       if (response.success && response.data) {
         setTimesheetStatus(response.data.status);
-        message.success('Timesheet submitted for approval');
+        setCanSubmit(false);
+        setCanResubmit(false);
+        
+        const actionWord = eligibility.canResubmit ? 'resubmitted' : 'submitted';
+        message.success(`Timesheet ${actionWord} for approval`);
         return response.data;
       } else {
         throw new Error(response.message || 'Failed to submit timesheet');
       }
     } catch (error) {
       console.error('Error submitting timesheet:', error);
-      message.error('Failed to submit timesheet: ' + error.message);
+      message.error(error.message || 'Failed to submit timesheet');
       throw error;
     } finally {
       setLoading(false);
@@ -362,12 +430,42 @@ export function useTimesheetStore(year, month) {
     }
   };
 
+  /**
+   * Determine if the timesheet can be edited
+   */
+  const canEdit = () => {
+    return timesheetStatus === 'draft' || timesheetStatus === 'rejected';
+  };
+
+  /**
+   * Determine if the submit button should be shown
+   */
+  const showSubmitButton = () => {
+    return canEdit() && (canSubmit || canResubmit);
+  };
+
+  /**
+   * Get submit button text based on current state
+   */
+  const getSubmitButtonText = () => {
+    if (canResubmit) {
+      return 'Resubmit for Approval';
+    }
+    return 'Submit for Approval';
+  };
+
   return {
     entries,
     customHours,
     defaultHours,
     loading,
     timesheetStatus,
+    availableMonths,
+    canSubmit,
+    canResubmit,
+    canEdit: canEdit(),
+    showSubmitButton: showSubmitButton(),
+    submitButtonText: getSubmitButtonText(),
     saveEntry,
     saveBulkEntries,
     submitTimesheet,
@@ -377,6 +475,91 @@ export function useTimesheetStore(year, month) {
     clearMonth,
     deleteEntry,
     getMonthStats,
-    loadTimesheetData // Expose for manual refresh
+    loadTimesheetData, // Expose for manual refresh
+    loadAvailableMonths, // Expose for manual refresh
+    checkSubmissionEligibility // Expose for validation
+  };
+}
+
+/**
+ * Hook specifically for timesheet history
+ */
+export function useTimesheetHistory() {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Get auth token from localStorage
+  const getAuthToken = () => {
+    return localStorage.getItem('authToken');
+  };
+
+  // Get headers with auth token
+  const getHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    };
+  };
+
+  // Generic API request method
+  const apiRequest = async (endpoint, options = {}) => {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
+      headers: getHeaders(),
+      ...options,
+    };
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
+    }
+  };
+
+  /**
+   * Load timesheet history
+   */
+  const loadHistory = async () => {
+    setLoading(true);
+    try {
+      const response = await apiRequest('/timesheets/history');
+      
+      if (response.success && response.data) {
+        setHistory(response.data);
+      } else {
+        setHistory([]);
+      }
+    } catch (error) {
+      console.error('Error loading timesheet history:', error);
+      message.error('Failed to load timesheet history');
+      setHistory([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load history on mount
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  return {
+    history,
+    loading,
+    loadHistory
   };
 }

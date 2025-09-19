@@ -1,7 +1,8 @@
-// src/pages/TimesheetPage.jsx - Updated to work with API integration
+// Fixed TimesheetPage.jsx - Allow viewing any timesheet, restrict editing based on rules
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Typography, Space, Button, message, Spin } from 'antd';
-import { SaveOutlined, SendOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Typography, Space, Button, message, Spin, Alert } from 'antd';
+import { SaveOutlined, SendOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import TimesheetHeader from '../components/Timesheet/TimesheetHeader';
 import TimesheetCalendar from '../components/Timesheet/TimesheetCalendar';
 import DayEntryModal from '../components/Timesheet/DayEntryModal';
@@ -12,26 +13,38 @@ import dayjs from 'dayjs';
 const { Title } = Typography;
 
 /**
- * TimesheetPage - Updated for API integration
- * 
- * This component now works with the backend API through the updated hook
+ * Updated TimesheetPage - Allow viewing any timesheet, restrict editing based on business rules
  */
 function TimesheetPage() {
-  // State management
-  const [selectedYear, setSelectedYear] = useState(2025);
-  const [selectedMonth, setSelectedMonth] = useState(7); // July
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Get year/month from URL params or default to current
+  const [selectedYear, setSelectedYear] = useState(
+    parseInt(searchParams.get('year')) || dayjs().year()
+  );
+  const [selectedMonth, setSelectedMonth] = useState(
+    parseInt(searchParams.get('month')) || dayjs().month() + 1
+  );
+  
   const [modalVisible, setModalVisible] = useState(false);
   const [bulkModalVisible, setBulkModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedDates, setSelectedDates] = useState([]);
   
-  // Updated hook for API integration
+  // Updated hook with new functionality
   const {
     entries,
     customHours,
     defaultHours,
     loading,
     timesheetStatus,
+    availableMonths,
+    canSubmit,
+    canResubmit,
+    canEdit,
+    showSubmitButton,
+    submitButtonText,
     saveEntry,
     saveBulkEntries,
     submitTimesheet,
@@ -41,34 +54,75 @@ function TimesheetPage() {
     clearMonth,
     deleteEntry,
     getMonthStats,
-    loadTimesheetData
+    loadTimesheetData,
+    loadAvailableMonths,
+    checkSubmissionEligibility
   } = useTimesheetStore(selectedYear, selectedMonth);
 
-  // Current month key for data organization
-  const currentMonthKey = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}`;
+  // Check if this is a current/available month (for editing) vs historical month (view-only)
+  const isCurrentOrAvailableMonth = () => {
+    return availableMonths.some(am => am.year === selectedYear && am.month === selectedMonth);
+  };
+
+  // Check if this is a historical timesheet that can be viewed
+  const isHistoricalTimesheet = () => {
+    const currentDate = dayjs();
+    const timesheetDate = dayjs().year(selectedYear).month(selectedMonth - 1);
+    
+    // Allow viewing if:
+    // 1. It's current month or available month (handled by isCurrentOrAvailableMonth)
+    // 2. It's a past month with timesheet data
+    // 3. It's not more than 2 years old (reasonable limit)
+    
+    return timesheetDate.isBefore(currentDate) && 
+           timesheetDate.isAfter(currentDate.subtract(2, 'year'));
+  };
+
+  // Determine the viewing mode
+  const getViewingMode = () => {
+    if (isCurrentOrAvailableMonth()) {
+      return 'editable'; // Can edit based on canEdit flag
+    } else if (isHistoricalTimesheet()) {
+      return 'historical'; // View-only mode
+    } else {
+      return 'unavailable'; // Completely unavailable
+    }
+  };
+
+  const viewingMode = getViewingMode();
+
+  // Update URL when year/month changes
+  useEffect(() => {
+    const newSearchParams = new URLSearchParams();
+    newSearchParams.set('year', selectedYear.toString());
+    newSearchParams.set('month', selectedMonth.toString());
+    navigate(`?${newSearchParams.toString()}`, { replace: true });
+  }, [selectedYear, selectedMonth, navigate]);
 
   /**
-   * Handle single day selection for editing
+   * Handle single day selection for editing/viewing
    */
   const handleDayClick = (date) => {
-    // Don't allow editing if timesheet is submitted/approved
-    if (timesheetStatus === 'submitted' || timesheetStatus === 'approved') {
-      message.warning('Cannot edit submitted or approved timesheet');
+    if (viewingMode !== 'editable' || !canEdit) {
+      // For historical or non-editable timesheets, show read-only modal
+      setSelectedDate(date);
+      setSelectedDates([]);
+      setModalVisible(true);
       return;
     }
 
+    // For editable timesheets
     setSelectedDate(date);
     setSelectedDates([]); // Clear bulk selection
     setModalVisible(true);
   };
 
   /**
-   * Handle bulk day selection
+   * Handle bulk day selection (only for editable timesheets)
    */
   const handleBulkSelection = (dates) => {
-    // Don't allow bulk editing if timesheet is submitted/approved
-    if (timesheetStatus === 'submitted' || timesheetStatus === 'approved') {
-      message.warning('Cannot edit submitted or approved timesheet');
+    if (viewingMode !== 'editable' || !canEdit) {
+      message.info('This timesheet is in view-only mode');
       return;
     }
 
@@ -82,95 +136,43 @@ function TimesheetPage() {
   };
 
   /**
-   * Handle save entry from modal
+   * Handle save entry from modal (only for editable)
    */
   const handleSaveEntry = async (entryData) => {
+    if (viewingMode !== 'editable') {
+      message.warning('This timesheet cannot be edited');
+      return;
+    }
+
     try {
       await saveEntry(entryData);
       setModalVisible(false);
     } catch (error) {
-      // Error is already handled in the hook
       console.error('Error saving entry:', error);
     }
   };
 
   /**
-   * Handle save bulk entries from modal
+   * Handle save bulk entries from modal (only for editable)
    */
   const handleSaveBulkEntries = async (entriesArray) => {
+    if (viewingMode !== 'editable') {
+      message.warning('This timesheet cannot be edited');
+      return;
+    }
+
     try {
       await saveBulkEntries(entriesArray);
       setBulkModalVisible(false);
     } catch (error) {
-      // Error is already handled in the hook
       console.error('Error saving bulk entries:', error);
     }
   };
 
   /**
-   * Apply default hours to all working days
-   */
-  const applyToAllWorkingDays = async () => {
-    if (!defaultHours) {
-      message.warning('Please set default working hours first');
-      return;
-    }
-
-    if (timesheetStatus === 'submitted' || timesheetStatus === 'approved') {
-      message.warning('Cannot edit submitted or approved timesheet');
-      return;
-    }
-
-    try {
-      const workingDays = getWorkingDaysInMonth(selectedYear, selectedMonth);
-      const bulkData = workingDays.map(date => ({
-        date,
-        type: 'working_hours',
-        startTime: defaultHours.startTime,
-        endTime: defaultHours.endTime,
-        notes: 'Applied via bulk action'
-      }));
-
-      await saveBulkEntries(bulkData);
-      message.success(`Applied default hours to ${workingDays.length} working days`);
-    } catch (error) {
-      // Error is already handled in the hook
-      console.error('Error applying default hours:', error);
-    }
-  };
-
-  /**
-   * Clear all entries for current month
-   */
-  const handleClearAll = async () => {
-    if (timesheetStatus === 'submitted' || timesheetStatus === 'approved') {
-      message.warning('Cannot clear submitted or approved timesheet');
-      return;
-    }
-
-    try {
-      await clearMonth();
-    } catch (error) {
-      console.error('Error clearing month:', error);
-    }
-  };
-
-  /**
-   * Save timesheet as draft (automatic with any changes)
-   */
-  const handleSaveDraft = () => {
-    message.success('Timesheet automatically saved as draft');
-  };
-
-  /**
-   * Submit timesheet for approval
+   * Handle timesheet submission
    */
   const handleSubmitForApproval = async () => {
-    if (timesheetStatus === 'submitted' || timesheetStatus === 'approved') {
-      message.warning('Timesheet is already submitted or approved');
-      return;
-    }
-
     try {
       // Get current stats to validate
       const stats = await getMonthStats();
@@ -182,18 +184,24 @@ function TimesheetPage() {
       }
 
       await submitTimesheet();
+      
+      // Refresh available months after submission
+      await loadAvailableMonths();
     } catch (error) {
-      // Error is already handled in the hook
       console.error('Error submitting timesheet:', error);
     }
   };
 
   /**
-   * Refresh timesheet data
+   * Handle refresh timesheet data
    */
   const handleRefresh = async () => {
     try {
       await loadTimesheetData();
+      if (viewingMode === 'editable') {
+        await loadAvailableMonths();
+        await checkSubmissionEligibility(selectedYear, selectedMonth);
+      }
       message.success('Timesheet data refreshed');
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -211,6 +219,87 @@ function TimesheetPage() {
     setSelectedMonth(newMonth);
   };
 
+  /**
+   * Navigate to history page
+   */
+  const handleViewHistory = () => {
+    navigate('/history');
+  };
+
+  /**
+   * Get appropriate header props based on viewing mode
+   */
+  const getHeaderProps = () => {
+    if (viewingMode === 'editable') {
+      return {
+        year: selectedYear,
+        month: selectedMonth,
+        status: timesheetStatus,
+        availableMonths: availableMonths,
+        onYearChange: handleYearChange,
+        onMonthChange: handleMonthChange,
+        canSubmit: canSubmit,
+        canResubmit: canResubmit,
+        showSubmitButton: showSubmitButton
+      };
+    } else {
+      // For historical timesheets, create a simple month selector
+      return {
+        year: selectedYear,
+        month: selectedMonth,
+        status: timesheetStatus,
+        availableMonths: [], // Don't show available months restriction
+        onYearChange: handleYearChange,
+        onMonthChange: handleMonthChange,
+        canSubmit: false,
+        canResubmit: false,
+        showSubmitButton: false
+      };
+    }
+  };
+
+  /**
+   * Get status-based alert message
+   */
+  const getStatusAlert = () => {
+    
+
+    if (timesheetStatus === 'rejected') {
+      return (
+        <Alert
+          message="Timesheet Rejected"
+          description="This timesheet was rejected and can now be edited and resubmitted."
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          action={
+            showSubmitButton && (
+              <Button size="small" type="primary" onClick={handleSubmitForApproval}>
+                Resubmit
+              </Button>
+            )
+          }
+        />
+      );
+    }
+    
+
+    
+    if (timesheetStatus === 'approved') {
+      return (
+        <Alert
+          message="Approved"
+          description="This timesheet has been approved and is now final."
+          type="success"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      );
+    }
+
+    return null;
+  };
+
   // Show loading spinner while data is loading
   if (loading && Object.keys(entries).length === 0) {
     return (
@@ -220,16 +309,50 @@ function TimesheetPage() {
     );
   }
 
+  // Show error only if timesheet is completely unavailable
+  if (viewingMode === 'unavailable') {
+    const currentAvailable = availableMonths.find(am => am.isCurrentMonth);
+    return (
+      <div>
+        <TimesheetHeader {...getHeaderProps()} />
+        
+        <Card>
+          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <Title level={3} style={{ color: '#999' }}>
+              Timesheet Not Available
+            </Title>
+            <p style={{ color: '#666', marginBottom: 24, fontSize: '16px' }}>
+              The timesheet for {dayjs().year(selectedYear).month(selectedMonth - 1).format('MMMM YYYY')} is not available.
+            </p>
+            <Space>
+              <Button 
+                type="primary" 
+                onClick={() => {
+                  if (currentAvailable) {
+                    handleYearChange(currentAvailable.year);
+                    handleMonthChange(currentAvailable.month);
+                  }
+                }}
+              >
+                Go to Current Month
+              </Button>
+              <Button onClick={handleViewHistory}>
+                View History
+              </Button>
+            </Space>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Page Header */}
-      <TimesheetHeader 
-        year={selectedYear}
-        month={selectedMonth}
-        status={timesheetStatus}
-        onYearChange={handleYearChange}
-        onMonthChange={handleMonthChange}
-      />
+      <TimesheetHeader {...getHeaderProps()} />
+
+      {/* Status Alert */}
+      {getStatusAlert()}
 
       {/* Main Calendar Card */}
       <Card>
@@ -239,43 +362,50 @@ function TimesheetPage() {
               {dayjs().year(selectedYear).month(selectedMonth - 1).format('MMMM YYYY')} Timesheet
             </Title>
             <div style={{ fontSize: '14px', color: '#666', marginTop: 4 }}>
-              Status: <span style={{ 
+              <span>Status: </span>
+              <span style={{ 
                 color: timesheetStatus === 'approved' ? '#52c41a' : 
                       timesheetStatus === 'submitted' ? '#1890ff' : 
                       timesheetStatus === 'rejected' ? '#ff4d4f' : '#faad14',
                 fontWeight: 500 
               }}>
-                {timesheetStatus.charAt(0).toUpperCase() + timesheetStatus.slice(1)}
+                {timesheetStatus === 'submitted' ? 'Pending Approval' : 
+                 timesheetStatus.charAt(0).toUpperCase() + timesheetStatus.slice(1)}
               </span>
+              {viewingMode === 'historical' && (
+                <span style={{ marginLeft: 8, color: '#999' }}>• Historical View</span>
+              )}
+              {viewingMode === 'editable' && !canEdit && (
+                <span style={{ marginLeft: 8, color: '#999' }}>• Read Only</span>
+              )}
             </div>
           </Col>
           <Col>
             <Space>
               <Button 
-                icon={<ReloadOutlined />} 
-                onClick={handleRefresh}
-                loading={loading}
-                disabled={loading}
+                icon={<HistoryOutlined />} 
+                onClick={handleViewHistory}
               >
-                Refresh
+                View History
               </Button>
-              {timesheetStatus === 'draft' && (
-                <>
-                  <Button 
-                    icon={<SaveOutlined />} 
-                    onClick={handleSaveDraft}
-                  >
-                    Save Draft
-                  </Button>
-                  <Button 
-                    type="primary" 
-                    icon={<SendOutlined />} 
-                    onClick={handleSubmitForApproval}
-                    loading={loading}
-                  >
-                    Submit for Approval
-                  </Button>
-                </>
+       
+              {viewingMode === 'editable' && canEdit && timesheetStatus === 'draft' && (
+                <Button 
+                  icon={<SaveOutlined />} 
+                  onClick={() => message.success('Timesheet automatically saved as draft')}
+                >
+                  Save Draft
+                </Button>
+              )}
+              {viewingMode === 'editable' && showSubmitButton && (
+                <Button 
+                  type="primary" 
+                  icon={<SendOutlined />} 
+                  onClick={handleSubmitForApproval}
+                  loading={loading}
+                >
+                  {submitButtonText}
+                </Button>
               )}
             </Space>
           </Col>
@@ -308,32 +438,67 @@ function TimesheetPage() {
             onBulkSelection={handleBulkSelection}
           />
         </div>
+
+        {/* Mode-specific message */}
+        {viewingMode === 'historical' && (
+          <div style={{ 
+            marginTop: 16, 
+            padding: '12px 16px', 
+            backgroundColor: '#e6f7ff', 
+            borderRadius: '6px',
+            border: '1px solid #91d5ff',
+            textAlign: 'center' 
+          }}>
+            <span style={{ color: '#1890ff', fontSize: '14px' }}>
+              📅 You're viewing a historical timesheet. Click on any day to see the details.
+            </span>
+          </div>
+        )}
+
+        {viewingMode === 'editable' && !canEdit && (
+          <div style={{ 
+            marginTop: 16, 
+            padding: '12px 16px', 
+            backgroundColor: '#f0f0f0', 
+            borderRadius: '6px',
+            textAlign: 'center' 
+          }}>
+            <span style={{ color: '#666', fontSize: '14px' }}>
+              This timesheet is in read-only mode. 
+              {timesheetStatus === 'submitted' && ' It is currently awaiting approval.'}
+              {timesheetStatus === 'approved' && ' It has been approved and finalized.'}
+            </span>
+          </div>
+        )}
       </Card>
 
-      {/* Single Day Entry Modal */}
+      {/* Single Day Entry Modal - Modified for read-only mode */}
       <DayEntryModal
         visible={modalVisible}
         date={selectedDate}
         existingEntry={selectedDate ? entries[selectedDate] : null}
         customHoursList={customHours}
         defaultHours={defaultHours}
-        onSave={handleSaveEntry}
+        onSave={viewingMode === 'editable' ? handleSaveEntry : null}
         onCancel={() => setModalVisible(false)}
-        onAddCustomHours={addCustomHours}
-        onRemoveCustomHours={removeCustomHours}
+        onAddCustomHours={viewingMode === 'editable' ? addCustomHours : null}
+        onRemoveCustomHours={viewingMode === 'editable' ? removeCustomHours : null}
+        readOnly={viewingMode !== 'editable' || !canEdit}
       />
 
-      {/* Bulk Selection Modal */}
-      <BulkSelectionModal
-        visible={bulkModalVisible}
-        dates={selectedDates}
-        customHoursList={customHours}
-        defaultHours={defaultHours}
-        onSave={handleSaveBulkEntries}
-        onCancel={() => setBulkModalVisible(false)}
-        onAddCustomHours={addCustomHours}
-        onRemoveCustomHours={removeCustomHours}
-      />
+      {/* Bulk Selection Modal - Only for editable mode */}
+      {viewingMode === 'editable' && canEdit && (
+        <BulkSelectionModal
+          visible={bulkModalVisible}
+          dates={selectedDates}
+          customHoursList={customHours}
+          defaultHours={defaultHours}
+          onSave={handleSaveBulkEntries}
+          onCancel={() => setBulkModalVisible(false)}
+          onAddCustomHours={addCustomHours}
+          onRemoveCustomHours={removeCustomHours}
+        />
+      )}
     </div>
   );
 }

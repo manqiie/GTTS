@@ -13,13 +13,6 @@ const DocumentViewer = ({
   size = 'small' 
 }) => {
   const handleViewDocument = async (document) => {
-    // If a custom onViewDocument function is provided, use that
-    if (onViewDocument) {
-      onViewDocument(document);
-      return;
-    }
-
-    // Use the exact same logic as your original code
     try {
       console.log('Attempting to view document:', document);
       
@@ -28,7 +21,7 @@ const DocumentViewer = ({
         return;
       }
 
-      // Call API to get document content - EXACT same as original
+      // Call API to get document content
       const token = localStorage.getItem('authToken');
       const response = await fetch(`http://localhost:8080/api/documents/${document.id}/download`, {
         headers: {
@@ -43,7 +36,7 @@ const DocumentViewer = ({
       const data = await response.json();
       
       if (data.success && data.content) {
-        // Create a blob from base64 content - EXACT same as original
+        // Create a blob from base64 content
         const binaryString = atob(data.content);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -51,11 +44,11 @@ const DocumentViewer = ({
         }
         const blob = new Blob([bytes], { type: data.mimeType });
         
-        // Create URL and open in new tab - EXACT same as original
+        // Create URL and open in new tab
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
         
-        // Clean up URL after a delay - EXACT same as original
+        // Clean up URL after a delay
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         
       } else {
@@ -82,7 +75,7 @@ const DocumentViewer = ({
                   type="link" 
                   size={size}
                   icon={<EyeOutlined />}
-                  onClick={() => handleViewDocument(doc)}
+                  onClick={() => onViewDocument ? onViewDocument(doc) : handleViewDocument(doc)}
                 />
               </Tooltip>
               <Text style={{ fontSize: size === 'small' ? '11px' : '13px' }}>

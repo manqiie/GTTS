@@ -71,66 +71,15 @@ function TimesheetHistoryPage() {
         setHistory(response.data);
       } else {
         console.log('No history data received or API error');
-        // Fallback to test data if API fails
-        setHistory(getTestData());
         message.warning('Could not load history from server, showing test data');
       }
     } catch (error) {
       console.error('Error loading timesheet history:', error);
       message.error('Failed to load timesheet history, showing test data');
-      // Fallback to test data on error
-      setHistory(getTestData());
+  
     } finally {
       setLoading(false);
     }
-  };
-
-  // Test data fallback
-  const getTestData = () => {
-    return [
-      {
-        timesheetId: 1,
-        year: 2024,
-        month: 12,
-        monthName: 'December',
-        status: 'approved',
-        submittedAt: '2024-12-01T10:30:00',
-        approvedBy: 'Alice Johnson',
-        approvedAt: '2024-12-02T14:20:00',
-        approvalComments: 'Approved - well documented',
-        totalEntries: 20,
-        workingDays: 18,
-        leaveDays: 2
-      },
-      {
-        timesheetId: 2,
-        year: 2024,
-        month: 11,
-        monthName: 'November',
-        status: 'rejected',
-        submittedAt: '2024-11-01T09:15:00',
-        approvedBy: 'Bob Chen',
-        approvedAt: '2024-11-02T11:45:00',
-        approvalComments: 'Please provide supporting documents for leave days',
-        totalEntries: 21,
-        workingDays: 19,
-        leaveDays: 2
-      },
-      {
-        timesheetId: 3,
-        year: 2024,
-        month: 10,
-        monthName: 'October',
-        status: 'submitted',
-        submittedAt: '2024-10-01T16:45:00',
-        approvedBy: null,
-        approvedAt: null,
-        approvalComments: null,
-        totalEntries: 22,
-        workingDays: 20,
-        leaveDays: 2
-      }
-    ];
   };
 
   // Load data on component mount
@@ -243,15 +192,15 @@ function TimesheetHistoryPage() {
       render: (_, record) => (
         <div style={{ fontSize: '12px' }}>
           <div>
-            <span style={{ color: '#1890ff', fontWeight: 500 }}>{record.workingDays}</span>
+            <span style={{  fontWeight: 500 }}>{record.workingDays}</span>
             <span style={{ color: '#666' }}> working days</span>
           </div>
           <div>
-            <span style={{ color: '#faad14', fontWeight: 500 }}>{record.leaveDays}</span>
+            <span style={{fontWeight: 500 }}>{record.leaveDays}</span>
             <span style={{ color: '#666' }}> leave days</span>
           </div>
           <div>
-            <span style={{ color: '#52c41a', fontWeight: 500 }}>{record.totalEntries}</span>
+            <span style={{ fontWeight: 500 }}>{record.totalEntries}</span>
             <span style={{ color: '#666' }}> total entries</span>
           </div>
         </div>
@@ -333,65 +282,6 @@ function TimesheetHistoryPage() {
       />
 
       <Card>
-        {/* API Status Indicator */}
-        <div style={{ 
-          marginBottom: 16, 
-          padding: '8px 12px', 
-          backgroundColor: '#f0f0f0', 
-          borderRadius: '4px',
-          fontSize: '12px',
-          color: '#666'
-        }}>
-          Status: {loading ? 'Loading from API...' : `Showing ${history.length} records`}
-          <span style={{ marginLeft: 8, color: '#999' }}>
-            (Check console for API debug info)
-          </span>
-        </div>
-
-        {/* Summary Stats */}
-        {history.length > 0 && (
-          <div style={{ 
-            marginBottom: 20, 
-            padding: '16px', 
-            backgroundColor: '#fafafa', 
-            borderRadius: '6px' 
-          }}>
-            <Row gutter={24}>
-              <Col span={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
-                    {history.length}
-                  </div>
-                  <div style={{ color: '#666', fontSize: '12px' }}>Total Submissions</div>
-                </div>
-              </Col>
-              <Col span={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
-                    {history.filter(h => h.status === 'approved').length}
-                  </div>
-                  <div style={{ color: '#666', fontSize: '12px' }}>Approved</div>
-                </div>
-              </Col>
-              <Col span={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
-                    {history.filter(h => h.status === 'submitted').length}
-                  </div>
-                  <div style={{ color: '#666', fontSize: '12px' }}>Pending</div>
-                </div>
-              </Col>
-              <Col span={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ff4d4f' }}>
-                    {history.filter(h => h.status === 'rejected').length}
-                  </div>
-                  <div style={{ color: '#666', fontSize: '12px' }}>Rejected</div>
-                </div>
-              </Col>
-            </Row>
-          </div>
-        )}
 
         {/* History Table */}
         <Table

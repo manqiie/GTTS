@@ -188,7 +188,7 @@ export const AuthProvider = ({ children }) => {
       projectSite: backendUser.projectSite,
       company: backendUser.company,
       joinDate: backendUser.joinDate,
-      managerName: backendUser.managerName,
+      supervisorName: backendUser.supervisorName,
       status: backendUser.status?.toLowerCase() || 'active',
       roles: backendUser.roles || [],
       role: backendUser.role || (backendUser.roles?.[0]?.name) || 'employee',

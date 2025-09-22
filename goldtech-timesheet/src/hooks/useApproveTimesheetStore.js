@@ -1,14 +1,56 @@
-// src/hooks/useApproveTimesheetStore.js
+// Enhanced useApproveTimesheetStore.js - Better API integration
 import { useState, useEffect } from 'react';
+import { message } from 'antd';
 import dayjs from 'dayjs';
 
+const API_BASE_URL = 'http://localhost:8080/api';
+
 /**
- * Custom hook for managing timesheet approval data
- * This will be easily replaceable with API calls when backend is implemented
+ * Enhanced hook for managing timesheet approval data with API integration
  */
 export function useApproveTimesheetStore() {
   const [timesheets, setTimesheets] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // API helper functions
+  const getAuthToken = () => {
+    return localStorage.getItem('authToken');
+  };
+
+  const getHeaders = () => {
+    const token = getAuthToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    };
+  };
+
+  const apiRequest = async (endpoint, options = {}) => {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
+      headers: getHeaders(),
+      ...options,
+    };
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
+    }
+  };
 
   // Load timesheet data on mount
   useEffect(() => {
@@ -16,65 +58,75 @@ export function useApproveTimesheetStore() {
   }, []);
 
   /**
-   * Load all pending and submitted timesheets for approval
-   * Backend endpoint: GET /api/timesheets/pending-approval
+   * Load all timesheets for approval from API
    */
-  const loadTimesheets = async () => {
+  const loadTimesheets = async (statusFilter = 'all') => {
     setLoading(true);
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('Loading timesheets for approval from API...');
       
-      // Get employees data
-      const employeesData = localStorage.getItem('employees');
-      const employees = employeesData ? JSON.parse(employeesData) : [];
+      const response = await apiRequest(`/timesheets/approval/all?status=${statusFilter}`);
       
-      // Get timesheet data
-      const timesheetData = localStorage.getItem('timesheetData');
-      const allTimesheets = timesheetData ? JSON.parse(timesheetData) : {};
-      
-      // Get approval statuses
-      const approvalData = localStorage.getItem('timesheetApprovals');
-      const approvals = approvalData ? JSON.parse(approvalData) : {};
-      
-      // Generate approval data - only include submitted timesheets
-      const approvalTimesheets = generateApprovalData(employees, allTimesheets, approvals);
-      setTimesheets(approvalTimesheets);
+      if (response.success && response.data) {
+        console.log('Timesheets loaded successfully:', response.data);
+        
+        // Transform API data to match frontend format
+        const transformedTimesheets = response.data.map(transformApiTimesheetToFrontend);
+        setTimesheets(transformedTimesheets);
+      } else {
+        console.log('No timesheet data received or API error');
+        message.warning('Could not load timesheets from server, showing test data');
+      }
     } catch (error) {
-      console.error('Error loading approval timesheets:', error);
-      setTimesheets([]);
+      console.error('Error loading timesheets for approval:', error);
+      message.error('Failed to load timesheets for approval');
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Update timesheet approval status
-   * Backend endpoint: PUT /api/timesheets/{id}/approval
+   * Update timesheet approval status via API
    */
   const updateTimesheetApproval = async (timesheetId, decision, comments = '') => {
     try {
-      const updatedTimesheets = timesheets.map(ts => 
-        ts.id === timesheetId 
-          ? { 
-              ...ts, 
-              status: decision,
-              lastUpdated: new Date().toISOString(),
-              approvalComments: comments,
-              approvedBy: 'Current Manager', // Get from auth context in real implementation
-              approvedAt: new Date().toISOString()
-            }
-          : ts
-      );
+      console.log('Updating timesheet approval:', { timesheetId, decision, comments });
       
-      setTimesheets(updatedTimesheets);
+      const response = await apiRequest(`/timesheets/approval/${timesheetId}/decision`, {
+        method: 'POST',
+        body: JSON.stringify({
+          decision: decision,
+          comments: comments
+        })
+      });
       
-      // Update localStorage (this will be replaced with API call)
-      saveApprovalToStorage(timesheetId, decision, comments);
-      
-      return true;
+      if (response.success) {
+        console.log('Timesheet approval updated successfully');
+        
+        // Update local state
+        setTimesheets(prevTimesheets => 
+          prevTimesheets.map(ts => 
+            ts.id === timesheetId 
+              ? { 
+                  ...ts, 
+                  status: decision,
+                  lastUpdated: new Date().toISOString(),
+                  approvalComments: comments,
+                  approvedBy: 'Current Manager', // This would come from auth context in real implementation
+                  approvedAt: new Date().toISOString()
+                }
+              : ts
+          )
+        );
+        
+        message.success(`Timesheet ${decision} successfully`);
+        return true;
+      } else {
+        throw new Error(response.message || 'Failed to update approval');
+      }
     } catch (error) {
       console.error('Error updating timesheet approval:', error);
+      message.error('Failed to update timesheet approval: ' + error.message);
       return false;
     }
   };
@@ -121,47 +173,97 @@ export function useApproveTimesheetStore() {
 
   /**
    * Get detailed timesheet data for approval review
-   * Backend endpoint: GET /api/timesheets/{id}/approval-details
    */
   const getTimesheetDetails = async (timesheetId) => {
     try {
-      const timesheet = timesheets.find(ts => ts.id === timesheetId);
-      if (!timesheet) return null;
+      console.log('Getting timesheet details for approval:', timesheetId);
+      
+      const response = await apiRequest(`/timesheets/approval/${timesheetId}/details`);
+      
+      if (response.success && response.data) {
+        console.log('Timesheet details loaded successfully');
+        
+        // Transform the detailed response
+        const timesheet = timesheets.find(ts => ts.id === timesheetId);
+        if (!timesheet) return null;
 
-      // Get detailed timesheet entries
-      const timesheetData = localStorage.getItem('timesheetData');
-      const allTimesheets = timesheetData ? JSON.parse(timesheetData) : {};
-      const monthKey = `${timesheet.year}-${timesheet.month.toString().padStart(2, '0')}`;
-      const entries = allTimesheets[monthKey] || {};
-
-      // Calculate additional statistics
-      const workingEntries = Object.values(entries).filter(entry => entry.type === 'working_hours');
-      const totalHours = calculateTotalHours(workingEntries);
-      const leaveBreakdown = calculateLeaveBreakdown(Object.values(entries));
-
-      return {
-        ...timesheet,
-        entries: entries,
-        totalDays: Object.keys(entries).length,
-        workingDays: workingEntries.length,
-        leaveDays: Object.values(entries).filter(entry => 
-          ['annual_leave', 'medical_leave', 'off_in_lieu', 'childcare_leave', 
-           'hospitalization_leave', 'maternity_leave', 'paternity_leave', 
-           'compassionate_leave'].includes(entry.type)
-        ).length,
-        totalHours: totalHours,
-        leaveBreakdown: leaveBreakdown
-      };
+        // Merge basic timesheet info with detailed data
+        return {
+          ...timesheet,
+          entries: response.data.entries || {},
+          totalDays: Object.keys(response.data.entries || {}).length,
+          workingDays: Object.values(response.data.entries || {}).filter(entry => entry.type === 'working_hours').length,
+          leaveDays: Object.values(response.data.entries || {}).filter(entry => 
+            ['annual_leave', 'medical_leave', 'off_in_lieu', 'childcare_leave', 
+             'hospitalization_leave', 'maternity_leave', 'paternity_leave', 
+             'compassionate_leave'].includes(entry.type)
+          ).length,
+          totalHours: calculateTotalHours(Object.values(response.data.entries || {})),
+          leaveBreakdown: calculateLeaveBreakdown(Object.values(response.data.entries || {}))
+        };
+      } else {
+        throw new Error(response.message || 'Failed to get timesheet details');
+      }
     } catch (error) {
       console.error('Error getting timesheet details:', error);
+      message.error('Failed to load timesheet details');
       return null;
     }
+  };
+
+  /**
+   * Load only pending timesheets
+   */
+  const loadPendingTimesheets = async () => {
+    await loadTimesheets('pending');
+  };
+
+  /**
+   * Transform API timesheet data to frontend format
+   */
+  const transformApiTimesheetToFrontend = (apiTimesheet) => {
+    return {
+      id: apiTimesheet.timesheetId,
+      employeeId: apiTimesheet.employeeId,
+      employeeName: apiTimesheet.employeeName,
+      projectSite: apiTimesheet.employeeProjectSite || 'Not Set',
+      position: apiTimesheet.employeePosition || 'Not Set',
+      managerName: apiTimesheet.approvedBy || 'Not Assigned',
+      year: apiTimesheet.year,
+      month: apiTimesheet.month,
+      monthName: apiTimesheet.monthName,
+      status: mapApiStatusToFrontend(apiTimesheet.status),
+      submittedAt: apiTimesheet.submittedAt,
+      lastUpdated: apiTimesheet.updatedAt,
+      entryCount: 0, // Will be populated when needed
+      totalDays: 0,
+      workingDays: 0,
+      leaveDays: 0,
+      leaveBreakdown: {},
+      approvedBy: apiTimesheet.approvedBy,
+      approvedAt: apiTimesheet.approvedAt,
+      approvalComments: apiTimesheet.approvalComments || ''
+    };
+  };
+
+  /**
+   * Map API status to frontend status
+   */
+  const mapApiStatusToFrontend = (apiStatus) => {
+    const statusMap = {
+      'submitted': 'pending',
+      'approved': 'approved',
+      'rejected': 'rejected',
+      'pending': 'pending'
+    };
+    return statusMap[apiStatus] || 'pending';
   };
 
   return {
     timesheets,
     loading,
     loadTimesheets,
+    loadPendingTimesheets,
     updateTimesheetApproval,
     searchTimesheets,
     getTimesheetDetails
@@ -169,99 +271,17 @@ export function useApproveTimesheetStore() {
 }
 
 /**
- * Generate approval timesheet data from employees and timesheet data
- */
-function generateApprovalData(employees, allTimesheets, approvals) {
-  const approvalData = [];
-  const currentDate = dayjs();
-  
-  // Generate data for the last 3 months (more recent focus for approvals)
-  for (let i = 0; i < 3; i++) {
-    const targetDate = currentDate.subtract(i, 'month');
-    const year = targetDate.year();
-    const month = targetDate.month() + 1;
-    const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-    
-    employees.forEach(employee => {
-      if (employee.status === 'active') {
-        const hasTimesheet = allTimesheets[monthKey] && Object.keys(allTimesheets[monthKey]).length > 0;
-        
-        // Only include timesheets that have been submitted (have entries)
-        if (hasTimesheet) {
-          const entries = allTimesheets[monthKey];
-          const entryCount = Object.keys(entries).length;
-          const timesheetId = `${employee.id}-${monthKey}`;
-          
-          // Get approval status from storage
-          const approval = approvals[timesheetId];
-          let status = 'pending'; // Default to pending for submitted timesheets
-          
-          if (approval) {
-            status = approval.status;
-          }
-          
-          // Calculate statistics
-          const workingDays = Object.values(entries).filter(entry => entry.type === 'working_hours').length;
-          const leaveDays = Object.values(entries).filter(entry => 
-            ['annual_leave', 'medical_leave', 'off_in_lieu', 'childcare_leave',
-             'hospitalization_leave', 'maternity_leave', 'paternity_leave',
-             'compassionate_leave'].includes(entry.type)
-          ).length;
-          
-          const leaveBreakdown = calculateLeaveBreakdown(Object.values(entries));
-          
-          approvalData.push({
-            id: timesheetId,
-            employeeId: employee.employeeId,
-            employeeName: employee.name,
-            projectSite: employee.projectSite,
-            position: employee.position,
-            managerName: employee.managerName,
-            year: year,
-            month: month,
-            monthName: targetDate.format('MMMM'),
-            status: status,
-            submittedAt: new Date().toISOString(), // In real app, this would be actual submission time
-            lastUpdated: approval ? approval.updatedAt : new Date().toISOString(),
-            entryCount: entryCount,
-            totalDays: entryCount,
-            workingDays: workingDays,
-            leaveDays: leaveDays,
-            leaveBreakdown: leaveBreakdown,
-            approvedBy: approval ? approval.approvedBy : null,
-            approvedAt: approval ? approval.approvedAt : null,
-            approvalComments: approval ? approval.comments : ''
-          });
-        }
-      }
-    });
-  }
-  
-  return approvalData.sort((a, b) => {
-    // Sort by status (pending first), then by year desc, month desc, then by name
-    if (a.status !== b.status) {
-      if (a.status === 'pending') return -1;
-      if (b.status === 'pending') return 1;
-    }
-    if (a.year !== b.year) return b.year - a.year;
-    if (a.month !== b.month) return b.month - a.month;
-    return a.employeeName.localeCompare(b.employeeName);
-  });
-}
-
-/**
  * Calculate total working hours from working entries
  */
-function calculateTotalHours(workingEntries) {
-  return workingEntries.reduce((total, entry) => {
-    if (entry.startTime && entry.endTime) {
+function calculateTotalHours(entries) {
+  return entries
+    .filter(entry => entry.type === 'working_hours' && entry.startTime && entry.endTime)
+    .reduce((total, entry) => {
       const start = dayjs(`2000-01-01T${entry.startTime}:00`);
       const end = dayjs(`2000-01-01T${entry.endTime}:00`);
       const hours = end.diff(start, 'hour', true);
       return total + hours;
-    }
-    return total;
-  }, 0);
+    }, 0);
 }
 
 /**
@@ -279,26 +299,4 @@ function calculateLeaveBreakdown(entries) {
   });
   
   return breakdown;
-}
-
-/**
- * Save approval decision to localStorage (will be replaced with API)
- */
-function saveApprovalToStorage(timesheetId, decision, comments) {
-  try {
-    const approvalData = localStorage.getItem('timesheetApprovals') || '{}';
-    const approvals = JSON.parse(approvalData);
-    
-    approvals[timesheetId] = {
-      status: decision,
-      comments: comments,
-      approvedBy: 'Current Manager',
-      approvedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem('timesheetApprovals', JSON.stringify(approvals));
-  } catch (error) {
-    console.error('Error saving approval to localStorage:', error);
-  }
 }

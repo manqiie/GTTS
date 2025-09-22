@@ -1,15 +1,4 @@
-// DEBUG: Let's check what the timesheet ID looks like
-// Based on the hook, the ID format is: `${employee.id}-${monthKey}`
-// For example: "EMP001-2025-07"
-
-// The issue might be:
-// 1. URL encoding problems with the ID
-// 2. Route matching issues
-// 3. Navigation problems
-
-// Let's add some debugging and fix the navigation
-
-// 1. UPDATED ApproveTimesheetPage.jsx with debugging
+// Fixed ApproveTimesheetPage.jsx - Better ID handling and navigation
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, Select, Button, message } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -36,7 +25,6 @@ function ApproveTimesheetPage() {
     status: 'pending',
     month: 'all',
     year: 'all',
-   
   });
 
   useEffect(() => {
@@ -56,13 +44,28 @@ function ApproveTimesheetPage() {
   };
 
   const handleView = (timesheet) => {
- 
+    console.log('ApproveTimesheetPage - handleView called with:', timesheet);
     
-    // URL encode the ID to handle special characters like hyphens
-    const encodedId = encodeURIComponent(timesheet.id);
-    const targetPath = `/approve/review/${encodedId}`;
+    // Validate timesheet object
+    if (!timesheet || !timesheet.id) {
+      console.error('Invalid timesheet object:', timesheet);
+      message.error('Invalid timesheet data');
+      return;
+    }
+
+    // Use the exact ID from the timesheet object (no encoding needed for numeric IDs)
+    const timesheetId = timesheet.id;
+    const targetPath = `/approve/review/${timesheetId}`;
     
-    console.log('Target path:', targetPath);
+    console.log('Navigating to:', targetPath);
+    
+    // Store timesheet data in sessionStorage for the review page
+    try {
+      sessionStorage.setItem('currentTimesheet', JSON.stringify(timesheet));
+      console.log('Timesheet data stored in sessionStorage');
+    } catch (error) {
+      console.warn('Failed to store timesheet in sessionStorage:', error);
+    }
     
     // Navigate to the review page
     navigate(targetPath);
@@ -78,8 +81,6 @@ function ApproveTimesheetPage() {
     const values = [...new Set(timesheets.map(ts => ts[key]))].sort();
     return values.map(value => ({ label: value, value }));
   };
-
- 
 
   const monthOptions = [
     { label: 'All Months', value: 'all' },
@@ -120,7 +121,6 @@ function ApproveTimesheetPage() {
         }
       />
 
-
       <Card style={{ marginBottom: 20 }}>
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={6}>
@@ -146,8 +146,6 @@ function ApproveTimesheetPage() {
               ]}
             />
           </Col>
-          
-     
           
           <Col xs={12} sm={6} md={4}>
             <Select

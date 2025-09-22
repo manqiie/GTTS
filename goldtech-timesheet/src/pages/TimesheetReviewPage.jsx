@@ -1,4 +1,4 @@
-// src/pages/TimesheetReviewPage.jsx - CLEAN VERSION
+// Fixed TimesheetReviewPage.jsx - Fix reject button and document viewing
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -12,13 +12,18 @@ import {
   Col,
   Typography,
   Space,
-  Spin
+  Spin,
+  Alert,
+  Modal,
+  Tooltip
 } from 'antd';
 import { 
   ArrowLeftOutlined,
   CheckOutlined,
   CloseOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  DownloadOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -43,56 +48,163 @@ function TimesheetReviewPage() {
   const [comments, setComments] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!storeLoading && timesheets.length > 0) {
-      loadTimesheetData();
-    }
-  }, [timesheetId, storeLoading, timesheets.length]);
+    loadTimesheetData();
+  }, [timesheetId, timesheets.length]);
 
   const loadTimesheetData = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const decodedId = decodeURIComponent(timesheetId);
-      const foundTimesheet = timesheets.find(ts => ts.id === decodedId);
+      console.log('Loading timesheet data for ID:', timesheetId);
       
+      let foundTimesheet = null;
+      try {
+        const storedTimesheet = sessionStorage.getItem('currentTimesheet');
+        if (storedTimesheet) {
+          const parsedTimesheet = JSON.parse(storedTimesheet);
+          if (parsedTimesheet.id && parsedTimesheet.id.toString() === timesheetId) {
+            foundTimesheet = parsedTimesheet;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse timesheet from sessionStorage:', e);
+      }
+
+      if (!foundTimesheet && timesheets.length > 0) {
+        foundTimesheet = timesheets.find(ts => 
+          ts.id.toString() === timesheetId || ts.id === parseInt(timesheetId)
+        );
+      }
+
       if (!foundTimesheet) {
-        message.error('Timesheet not found');
-        navigate('/approve');
+        setError(`Timesheet not found with ID: ${timesheetId}`);
         return;
       }
 
       setTimesheet(foundTimesheet);
       setComments(foundTimesheet.approvalComments || '');
 
-      const details = await getTimesheetDetails(decodedId);
-      setTimesheetDetails(details);
+      const details = await getTimesheetDetails(foundTimesheet.id);
+      
+      if (details) {
+        setTimesheetDetails(details);
+      } else {
+        setTimesheetDetails({
+          ...foundTimesheet,
+          entries: {},
+          totalDays: 0,
+          workingDays: 0,
+          leaveDays: 0,
+          totalHours: 0
+        });
+      }
+
     } catch (error) {
-      message.error('Failed to load timesheet data');
-      navigate('/approve');
+      console.error('Error loading timesheet data:', error);
+      setError('Failed to load timesheet data: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleApproval = async (decision) => {
-    if (!comments.trim() && decision === 'rejected') {
+    console.log('HandleApproval called with decision:', decision);
+    console.log('Comments:', comments);
+    
+    // Validate inputs
+    if (!decision || (decision !== 'approved' && decision !== 'rejected')) {
+      console.error('Invalid decision:', decision);
+      message.error('Invalid approval decision');
+      return;
+    }
+
+    if (decision === 'rejected' && (!comments || !comments.trim())) {
+      console.warn('Comments required for rejection');
       message.warning('Please provide comments for rejection');
       return;
     }
 
     setSubmitting(true);
+    
     try {
-      const decodedId = decodeURIComponent(timesheetId);
-      const success = await updateTimesheetApproval(decodedId, decision, comments);
+      console.log('Processing approval with:', { 
+        timesheetId, 
+        decision, 
+        comments: comments.trim() 
+      });
+      
+      const success = await updateTimesheetApproval(timesheetId, decision, comments.trim());
+      
       if (success) {
         message.success(`Timesheet ${decision} successfully`);
-        navigate('/approve');
+        sessionStorage.removeItem('currentTimesheet');
+        
+        // Add a small delay to ensure the message is visible
+        setTimeout(() => {
+          navigate('/approve');
+        }, 1000);
+      } else {
+        throw new Error('Approval update returned false');
       }
     } catch (error) {
-      message.error(`Error ${decision} timesheet`);
+      console.error(`Error ${decision} timesheet:`, error);
+      message.error(`Failed to ${decision} timesheet: ${error.message}`);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Document viewing functionality
+  const handleViewDocument = async (document) => {
+    try {
+      console.log('Attempting to view document:', document);
+      
+      if (!document.id) {
+        message.error('Invalid document ID');
+        return;
+      }
+
+      // Call API to get document content
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`http://localhost:8080/api/documents/${document.id}/download`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.content) {
+        // Create a blob from base64 content
+        const binaryString = atob(data.content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: data.mimeType });
+        
+        // Create URL and open in new tab
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        
+        // Clean up URL after a delay
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        
+      } else {
+        throw new Error(data.message || 'Failed to load document content');
+      }
+      
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      message.error('Failed to view document: ' + error.message);
     }
   };
 
@@ -190,7 +302,7 @@ function TimesheetReviewPage() {
     {
       title: 'Documents',
       key: 'documents',
-      width: 100,
+      width: 120,
       render: (_, record) => {
         if (!record.entry) return <span style={{ color: '#999' }}>-</span>;
         
@@ -199,15 +311,35 @@ function TimesheetReviewPage() {
         
         if (hasDocuments) {
           return (
-            <Tag color="green" size="small">
-              <FileTextOutlined /> {record.entry.supportingDocuments.length}
-            </Tag>
+            <div>
+              
+              <div>
+                {record.entry.supportingDocuments.map((doc, index) => (
+                  <div key={index} style={{ marginBottom: 2 }}>
+                    <Space size="small">
+                      <Tooltip title="View Document">
+                        <Button 
+                          type="link" 
+                          size="small"
+                          icon={<EyeOutlined />}
+                          onClick={() => handleViewDocument(doc)}
+                        />
+                      </Tooltip>
+                   
+                      <Text style={{ fontSize: '11px' }}>{doc.name}</Text>
+                    </Space>
+                  </div>
+                ))}
+              </div>
+            </div>
           );
         } else if (hasReference) {
           return (
-            <Tag color="blue" size="small">
-              <FileTextOutlined /> Ref
-            </Tag>
+            <Tooltip title={`References documents from ${dayjs(hasReference).format('MMM DD')}`}>
+              <Tag color="blue" size="small">
+                <FileTextOutlined /> Ref
+              </Tag>
+            </Tooltip>
           );
         }
         
@@ -216,7 +348,8 @@ function TimesheetReviewPage() {
     },
   ];
 
-  if (storeLoading || loading) {
+  // Loading state
+  if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <Spin size="large" tip="Loading timesheet data..." />
@@ -224,14 +357,34 @@ function TimesheetReviewPage() {
     );
   }
 
+
+  // Not found state
   if (!timesheet || !timesheetDetails) {
     return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Text>Timesheet not found</Text>
-        <br />
-        <Button onClick={() => navigate('/approve')} style={{ marginTop: 16 }}>
-          Back to Approve Timesheets
-        </Button>
+      <div>
+        <PageHeader
+          title="Timesheet Review - Not Found"
+          breadcrumbs={[
+            { title: 'Management' },
+            { title: 'Approve Timesheets', path: '/approve' },
+            { title: 'Not Found' }
+          ]}
+          extra={
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/approve')}>
+              Back to List
+            </Button>
+          }
+        />
+        
+        <Card>
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            <Text>Timesheet not found</Text>
+            <br />
+            <Button onClick={() => navigate('/approve')} style={{ marginTop: 16 }}>
+              Back to Approve Timesheets
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -255,7 +408,7 @@ function TimesheetReviewPage() {
       <PageHeader
         title={`Review Timesheet - ${timesheet.employeeName}`}
         breadcrumbs={breadcrumbs}
-        description={`${timesheet.monthName} ${timesheet.year} • ${timesheet.projectSite}`}
+        description={`${timesheet.monthName} ${timesheet.year} • ${timesheet.projectSite || 'No Project Site'}`}
         extra={
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/approve')}>
             Back to List
@@ -269,9 +422,9 @@ function TimesheetReviewPage() {
           <Col span={12}>
             <Descriptions column={1} size="small">
               <Descriptions.Item label="Employee">{timesheet.employeeName}</Descriptions.Item>
-              <Descriptions.Item label="Employee ID">{timesheet.employeeId}</Descriptions.Item>
-              <Descriptions.Item label="Position">{timesheet.position}</Descriptions.Item>
-              <Descriptions.Item label="Project Site">{timesheet.projectSite}</Descriptions.Item>
+              <Descriptions.Item label="Employee ID">{timesheet.employeeId || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Position">{timesheet.position || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Project Site">{timesheet.projectSite || 'N/A'}</Descriptions.Item>
             </Descriptions>
           </Col>
           <Col span={12}>
@@ -290,7 +443,7 @@ function TimesheetReviewPage() {
                   'Not submitted'
                 }
               </Descriptions.Item>
-              <Descriptions.Item label="Manager">{timesheet.managerName}</Descriptions.Item>
+              <Descriptions.Item label="Manager">{timesheet.managerName || 'N/A'}</Descriptions.Item>
             </Descriptions>
           </Col>
         </Row>
@@ -330,12 +483,18 @@ function TimesheetReviewPage() {
 
           <div style={{ textAlign: 'right' }}>
             <Space size="middle">
-              <Button onClick={() => navigate('/approve')}>Cancel</Button>
+              <Button onClick={() => navigate('/approve')}>
+                Cancel
+              </Button>
               <Button 
                 danger
                 icon={<CloseOutlined />}
                 loading={submitting}
-                onClick={() => handleApproval('rejected')}
+                onClick={() => {
+                  console.log('Reject button clicked');
+                  handleApproval('rejected');
+                }}
+                disabled={submitting}
               >
                 Reject
               </Button>
@@ -343,7 +502,11 @@ function TimesheetReviewPage() {
                 type="primary"
                 icon={<CheckOutlined />}
                 loading={submitting}
-                onClick={() => handleApproval('approved')}
+                onClick={() => {
+                  console.log('Approve button clicked');
+                  handleApproval('approved');
+                }}
+                disabled={submitting}
               >
                 Approve
               </Button>

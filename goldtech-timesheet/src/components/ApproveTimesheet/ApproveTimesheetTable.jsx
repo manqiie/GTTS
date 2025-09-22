@@ -1,4 +1,4 @@
-// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx
+// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx - Updated with Summary
 import React from 'react';
 import { Table, Tag, Button } from 'antd';
 import dayjs from 'dayjs';
@@ -38,19 +38,25 @@ function ApproveTimesheetTable({
       ),
     },
     {
-      title: 'Project Site',
-      dataIndex: 'projectSite',
-      key: 'projectSite',
+      title: 'Summary',
+      key: 'summary',
       width: 160,
-      sorter: (a, b) => a.projectSite.localeCompare(b.projectSite),
-      ellipsis: true,
-    },
-    {
-      title: 'Position',
-      dataIndex: 'position',
-      key: 'position',
-      width: 150,
-      sorter: (a, b) => a.position.localeCompare(b.position),
+      render: (_, record) => (
+        <div style={{ fontSize: '12px' }}>
+          <div>
+            <span style={{ fontWeight: 500 }}>{record.workingDays || 0}</span>
+            <span style={{ color: '#666' }}> working days</span>
+          </div>
+          <div>
+            <span style={{ fontWeight: 500 }}>{record.leaveDays || 0}</span>
+            <span style={{ color: '#666' }}> leave days</span>
+          </div>
+          <div>
+            <span style={{ fontWeight: 500 }}>{record.totalEntries || record.entryCount || 0}</span>
+            <span style={{ color: '#666' }}> total entries</span>
+          </div>
+        </div>
+      ),
     },
     {
       title: 'Status',

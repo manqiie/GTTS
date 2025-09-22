@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Layout, ConfigProvider } from 'antd';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
-import Sidebar from './components/Sidebar';
+import Sidebar from './components/Common/Sidebar';
 import LoginPage from './pages/auth/LoginPage';
 import HomePage from './pages/auth/HomePage';
 import ProfilePage from './pages/auth/ProfilePage';
@@ -14,8 +14,8 @@ import EmployeeManagementPage from './pages/UserManagement/EmployeeManagementPag
 import CreateEmployeePage from './pages/UserManagement/CreateEmployeePage';
 import EditEmployeePage from './pages/UserManagement/EditEmployeePage';
 import TimesheetManagementPage from './pages/TimesheetManagementPage';
-import ApproveTimesheetPage from './pages/ApproveTimesheetPage';
-import TimesheetReviewPage from './pages/TimesheetReviewPage';
+import ApproveTimesheetPage from './pages/TimesheetApproval/ApproveTimesheetPage';
+import TimesheetReviewPage from './pages/TimesheetApproval/TimesheetReviewPage';
 import './App.css';
 
 const { Content } = Layout;

@@ -14,7 +14,7 @@ import {
   LogoutOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { Sider } = Layout;
 const { Title, Text } = Typography;

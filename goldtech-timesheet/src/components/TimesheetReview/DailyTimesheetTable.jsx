@@ -53,6 +53,7 @@ const DailyTimesheetTable = ({
       title: 'Date',
       key: 'date',
       width: 80,
+      align:'center',
       render: (_, record) => (
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
@@ -70,6 +71,7 @@ const DailyTimesheetTable = ({
     {
       title: 'Working Hours / Leave Type',
       key: 'workingHours',
+      width: 250,
       render: (_, record) => {
         if (!record.entry) {
           return record.isWeekend ? 
@@ -81,7 +83,7 @@ const DailyTimesheetTable = ({
           const startTime = dayjs(record.entry.startTime, 'HH:mm').format('h:mm A');
           const endTime = dayjs(record.entry.endTime, 'HH:mm').format('h:mm A');
           return (
-            <span style={{ color: '#1890ff', fontWeight: 500, fontSize: '15px' }}>
+            <span style={{ color: '#1890ff', fontWeight: 500, fontSize: '13px' }}>
               {startTime} - {endTime}
             </span>
           );
@@ -94,6 +96,7 @@ const DailyTimesheetTable = ({
     {
       title: 'Notes',
       key: 'notes',
+      align: 'left',
       render: (_, record) => {
         if (!record.entry || !record.entry.notes) {
           return <span style={{ color: '#999' }}>-</span>;
@@ -104,7 +107,7 @@ const DailyTimesheetTable = ({
     {
       title: 'Documents',
       key: 'documents',
-      width: 120,
+      width: 300,
       render: (_, record) => {
         if (!record.entry) return <span style={{ color: '#999' }}>-</span>;
         

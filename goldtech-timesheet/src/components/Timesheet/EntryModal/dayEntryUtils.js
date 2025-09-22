@@ -1,23 +1,30 @@
-// dayEntryUtils.js - Utility Functions for Day Entry Components
+// dayEntryUtils.js - Updated utility functions with overnight shift support
 import dayjs from 'dayjs';
 
 export const dayEntryUtils = {
   /**
-   * Calculate working hours duration
+   * Calculate working hours duration with support for overnight shifts (PM to AM)
    */
   calculateDuration(startTime, endTime) {
     if (!startTime || !endTime) return null;
     
-    const start = dayjs(`2000-01-01 ${startTime}`);
-    const end = dayjs(`2000-01-01 ${endTime}`);
-    const hours = end.diff(start, 'hour');
-    const minutes = end.diff(start, 'minute') % 60;
+    let start = dayjs(`2000-01-01 ${startTime}`);
+    let end = dayjs(`2000-01-01 ${endTime}`);
+    
+    // If end time is before or equal to start time, assume it's next day (overnight shift)
+    if (end.isBefore(start) || end.isSame(start)) {
+      end = end.add(1, 'day');
+    }
+    
+    const totalMinutes = end.diff(start, 'minute');
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
     
     return {
       hours,
       minutes,
       formatted: `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`,
-      totalMinutes: end.diff(start, 'minute')
+      totalMinutes
     };
   },
 
@@ -49,7 +56,7 @@ export const dayEntryUtils = {
   },
 
   /**
-   * Validate entry form data
+   * Validate entry form data with overnight shift support
    */
   validateEntryData(formData, entryType, fileList, dateEarned) {
     const errors = [];
@@ -59,25 +66,28 @@ export const dayEntryUtils = {
       errors.push('Please select a valid entry type');
     }
 
-    // Working hours validation
+    // Working hours validation with overnight support
     if (entryType === 'working_hours') {
       if (!formData.startTime || !formData.endTime) {
         errors.push('Please set both start and end times for working hours');
       } else {
-        const start = dayjs(formData.startTime);
-        const end = dayjs(formData.endTime);
-        
-        if (end.isBefore(start) || end.isSame(start)) {
-          errors.push('End time must be after start time');
-        }
-
         const duration = this.calculateDuration(
           formData.startTime.format('HH:mm'),
           formData.endTime.format('HH:mm')
         );
         
-        if (duration && duration.totalMinutes > 16 * 60) { // More than 16 hours
-          errors.push('Working hours cannot exceed 16 hours per day');
+        if (!duration || duration.totalMinutes <= 0) {
+          errors.push('Invalid time range');
+        } else {
+          // Maximum 16 hours per shift
+          if (duration.totalMinutes > 16 * 60) {
+            errors.push('Working hours cannot exceed 16 hours per shift');
+          }
+          
+          // Minimum 30 minutes
+          if (duration.totalMinutes < 30) {
+            errors.push('Working hours must be at least 30 minutes');
+          }
         }
       }
     }
@@ -193,7 +203,7 @@ export const dayEntryUtils = {
   },
 
   /**
-   * Get working hours display text
+   * Get working hours display text with overnight shift support
    */
   getWorkingHoursDisplay(entry) {
     if (!entry || entry.type !== 'working_hours' || !entry.startTime || !entry.endTime) {
@@ -204,16 +214,21 @@ export const dayEntryUtils = {
     const end = this.formatTimeForDisplay(entry.endTime);
     const duration = this.calculateDuration(entry.startTime, entry.endTime);
 
+    // Check if it's an overnight shift
+    const isOvernightShift = dayjs(entry.endTime, 'HH:mm').isBefore(dayjs(entry.startTime, 'HH:mm')) || 
+                            dayjs(entry.endTime, 'HH:mm').isSame(dayjs(entry.startTime, 'HH:mm'));
+
     return {
-      timeRange: `${start} - ${end}`,
+      timeRange: `${start} - ${end}${isOvernightShift ? ' (+1)' : ''}`,
       duration: duration ? duration.formatted : '',
       startTime: start,
-      endTime: end
+      endTime: end,
+      isOvernightShift
     };
   },
 
   /**
-   * Generate entry summary for calendar display
+   * Generate entry summary for calendar display with overnight shift indicator
    */
   getEntryCalendarSummary(entry) {
     if (!entry) return null;
@@ -221,7 +236,15 @@ export const dayEntryUtils = {
     switch (entry.type) {
       case 'working_hours':
         if (entry.startTime && entry.endTime) {
-          return `${dayjs(entry.startTime, 'HH:mm').format('H:mm')}-${dayjs(entry.endTime, 'HH:mm').format('H:mm')}`;
+          // Use 12-hour format for calendar display
+          const start = dayjs(entry.startTime, 'HH:mm').format('h:mmA');
+          const end = dayjs(entry.endTime, 'HH:mm').format('h:mmA');
+          
+          // Check if overnight shift
+          const isOvernight = dayjs(entry.endTime, 'HH:mm').isBefore(dayjs(entry.startTime, 'HH:mm')) || 
+                             dayjs(entry.endTime, 'HH:mm').isSame(dayjs(entry.startTime, 'HH:mm'));
+          
+          return `${start}-${end}${isOvernight ? '+' : ''}`;
         }
         return 'Working';
 
@@ -250,7 +273,7 @@ export const dayEntryUtils = {
   },
 
   /**
-   * Validate bulk entry form data - FIXED VERSION
+   * Validate bulk entry form data with overnight shift support
    */
   validateBulkEntryData(formData, entryType, fileList, individualModifications, dates) {
     const errors = [];
@@ -260,25 +283,22 @@ export const dayEntryUtils = {
       errors.push('Please select a valid entry type');
     }
 
-    // Working hours validation
+    // Working hours validation with overnight support
     if (entryType === 'working_hours') {
       if (!formData.startTime || !formData.endTime) {
         errors.push('Please set both start and end times for working hours');
       } else {
-        const start = dayjs(formData.startTime);
-        const end = dayjs(formData.endTime);
-        
-        if (end.isBefore(start) || end.isSame(start)) {
-          errors.push('End time must be after start time');
-        }
-
         const duration = this.calculateDuration(
           formData.startTime.format('HH:mm'),
           formData.endTime.format('HH:mm')
         );
         
-        if (duration && duration.totalMinutes > 16 * 60) {
-          errors.push('Working hours cannot exceed 16 hours per day');
+        if (!duration || duration.totalMinutes <= 0) {
+          errors.push('Invalid time range');
+        } else if (duration.totalMinutes > 16 * 60) {
+          errors.push('Working hours cannot exceed 16 hours per shift');
+        } else if (duration.totalMinutes < 30) {
+          errors.push('Working hours must be at least 30 minutes');
         }
       }
     }
@@ -301,7 +321,7 @@ export const dayEntryUtils = {
       errors.push('Supporting documents are required for this leave type');
     }
 
-    // Off in Lieu validation - FIXED
+    // Off in Lieu validation
     if (entryType === 'off_in_lieu') {
       const daysWithoutEarnedDate = dates.filter(date => {
         const modification = individualModifications[date];
@@ -312,7 +332,7 @@ export const dayEntryUtils = {
         errors.push(`Please set date earned for all ${dates.length} days. ${daysWithoutEarnedDate.length} day(s) still need earned dates.`);
       }
 
-      // Validate each earned date - FIXED
+      // Validate each earned date
       dates.forEach(date => {
         const modification = individualModifications[date];
         if (modification && modification.dateEarned) {

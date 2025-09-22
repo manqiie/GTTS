@@ -95,14 +95,33 @@ const EntryHeader = ({ entryTypeDisplay, entryTypeColor, existingEntry, date }) 
   </Card>
 );
 
-// Working Hours Card Component
+// Working Hours Card Component with overnight shift support
 const WorkingHoursCard = ({ existingEntry }) => {
-  // Calculate duration
-  const start = dayjs(`2000-01-01 ${existingEntry.startTime}`);
-  const end = dayjs(`2000-01-01 ${existingEntry.endTime}`);
-  const hours = end.diff(start, 'hour');
-  const minutes = end.diff(start, 'minute') % 60;
-  const durationText = `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`;
+  // Calculate duration with overnight shift support
+  const calculateDuration = (startTime, endTime) => {
+    let start = dayjs(`2000-01-01 ${startTime}`);
+    let end = dayjs(`2000-01-01 ${endTime}`);
+    
+    // If end time is before or equal to start time, assume next day (overnight shift)
+    if (end.isBefore(start) || end.isSame(start)) {
+      end = end.add(1, 'day');
+    }
+    
+    const totalMinutes = end.diff(start, 'minute');
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    
+    return {
+      hours,
+      minutes,
+      totalMinutes,
+      formatted: `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`,
+      isOvernight: dayjs(endTime, 'HH:mm').isBefore(dayjs(startTime, 'HH:mm')) || 
+                   dayjs(endTime, 'HH:mm').isSame(dayjs(startTime, 'HH:mm'))
+    };
+  };
+
+  const duration = calculateDuration(existingEntry.startTime, existingEntry.endTime);
 
   return (
     <Card title="Working Hours" style={{ marginBottom: 20 }}>
@@ -120,6 +139,11 @@ const WorkingHoursCard = ({ existingEntry }) => {
             <Text type="secondary">End Time</Text>
             <div style={{ fontSize: '16px', fontWeight: 500, marginTop: 4 }}>
               {dayjs(existingEntry.endTime, 'HH:mm').format('h:mm A')}
+              {duration.isOvernight && (
+                <Tag color="blue" size="small" style={{ marginLeft: 8 }}>
+                  Next Day
+                </Tag>
+              )}
             </div>
           </div>
         </Col>
@@ -127,11 +151,14 @@ const WorkingHoursCard = ({ existingEntry }) => {
           <div>
             <Text type="secondary">Duration</Text>
             <div style={{ fontSize: '16px', fontWeight: 500, marginTop: 4 }}>
-              {durationText}
+              {duration.formatted}
             </div>
           </div>
         </Col>
+     
       </Row>
+      
+
     </Card>
   );
 };

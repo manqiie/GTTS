@@ -134,45 +134,63 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
     setSelectionMode(false);
   };
 
-  /**
-   * Get entry display info with support for half-day entries
-   */
-  const getEntryDisplay = (entry) => {
-    if (!entry) return null;
 
-    const getLeaveTypeDisplay = (type, halfDayPeriod = null) => {
-      const baseTypes = {
-        'annual_leave': { text: 'AL', color: 'orange' },
-        'annual_leave_halfday': { text: halfDayPeriod ? `AL-${halfDayPeriod}` : 'AL-HD', color: 'orange' },
-        'medical_leave': { text: 'ML', color: 'red' },
-        'childcare_leave': { text: 'CL', color: 'purple' },
-        'childcare_leave_halfday': { text: halfDayPeriod ? `CL-${halfDayPeriod}` : 'CL-HD', color: 'purple' },
-        'shared_parental_leave': { text: 'SPL', color: 'cyan' },
-        'nopay_leave': { text: 'NPL', color: 'gray' },
-        'nopay_leave_halfday': { text: halfDayPeriod ? `NPL-${halfDayPeriod}` : 'NPL-HD', color: 'gray' },
-        'hospitalization_leave': { text: 'HL', color: 'red' },
-        'reservist': { text: 'RSV', color: 'green' },
-        'paternity_leave': { text: 'PL', color: 'blue' },
-        'compassionate_leave': { text: 'CPL', color: 'magenta' },
-        'maternity_leave': { text: 'ML', color: 'pink' },
-        'off_in_lieu': { text: 'OIL', color: 'purple' },
-        'day_off': { text: 'PH', color: 'gold' }
-      };
+/**
+ * Get entry display info with support for overnight shifts
+ */
+const getEntryDisplay = (entry) => {
+  if (!entry) return null;
 
-      return baseTypes[type] || { text: 'N/A', color: 'default' };
+  const getLeaveTypeDisplay = (type, halfDayPeriod = null) => {
+    const baseTypes = {
+      'annual_leave': { text: 'AL', color: 'orange' },
+      'annual_leave_halfday': { text: halfDayPeriod ? `AL-${halfDayPeriod}` : 'AL-HD', color: 'orange' },
+      'medical_leave': { text: 'ML', color: 'red' },
+      'childcare_leave': { text: 'CL', color: 'purple' },
+      'childcare_leave_halfday': { text: halfDayPeriod ? `CL-${halfDayPeriod}` : 'CL-HD', color: 'purple' },
+      'shared_parental_leave': { text: 'SPL', color: 'cyan' },
+      'nopay_leave': { text: 'NPL', color: 'gray' },
+      'nopay_leave_halfday': { text: halfDayPeriod ? `NPL-${halfDayPeriod}` : 'NPL-HD', color: 'gray' },
+      'hospitalization_leave': { text: 'HL', color: 'red' },
+      'reservist': { text: 'RSV', color: 'green' },
+      'paternity_leave': { text: 'PL', color: 'blue' },
+      'compassionate_leave': { text: 'CPL', color: 'magenta' },
+      'maternity_leave': { text: 'ML', color: 'pink' },
+      'off_in_lieu': { text: 'OIL', color: 'purple' },
+      'day_off': { text: 'PH', color: 'gold' }
     };
 
-    switch (entry.type) {
-      case 'working_hours':
+    return baseTypes[type] || { text: 'N/A', color: 'default' };
+  };
+
+  switch (entry.type) {
+    case 'working_hours':
+      if (entry.startTime && entry.endTime) {
+        // Format to 12-hour format with AM/PM
         const start = dayjs(entry.startTime, 'HH:mm').format('h:mmA');
         const end = dayjs(entry.endTime, 'HH:mm').format('h:mmA');
-        return { text: `${start}-${end}`, color: 'blue' };
-      
-      // Handle all leave types including half-day variants
-      default:
-        return getLeaveTypeDisplay(entry.type, entry.halfDayPeriod);
-    }
-  };
+        
+        // Check if it's an overnight shift (end time is before or equal to start time)
+        const startTime = dayjs(entry.startTime, 'HH:mm');
+        const endTime = dayjs(entry.endTime, 'HH:mm');
+        const isOvernight = endTime.isBefore(startTime) || endTime.isSame(startTime);
+        
+        // Add "+" indicator for overnight shifts
+        const timeDisplay = `${start}-${end}${isOvernight ? '+' : ''}`;
+        
+        return { 
+          text: timeDisplay, 
+          color: 'blue',
+          title: isOvernight ? 'Overnight shift (extends to next day)' : 'Regular shift'
+        };
+      }
+      return { text: 'Working', color: 'blue' };
+    
+    // Handle all leave types including half-day variants
+    default:
+      return getLeaveTypeDisplay(entry.type, entry.halfDayPeriod);
+  }
+};
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -303,10 +321,12 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
                 {entryDisplay && (
                   <Tag 
                     color={entryDisplay.color} 
+                    title={entryDisplay.title || entryDisplay.text}
                     style={{ 
                       fontSize: '11px', 
                       margin: 0,
-                      padding: '2px 6px'
+                      padding: '2px 6px',
+                      cursor: 'help' // Show help cursor for overnight shifts
                     }}
                   >
                     {entryDisplay.text}

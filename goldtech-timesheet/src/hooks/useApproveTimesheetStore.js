@@ -1,4 +1,4 @@
-// Enhanced useApproveTimesheetStore.js - Better API integration
+// Enhanced useApproveTimesheetStore.js - Better API integration with statistics
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
@@ -219,9 +219,14 @@ export function useApproveTimesheetStore() {
   };
 
   /**
-   * Transform API timesheet data to frontend format
+   * Transform API timesheet data to frontend format - ENHANCED WITH STATISTICS
    */
   const transformApiTimesheetToFrontend = (apiTimesheet) => {
+    console.log('Transforming API timesheet:', apiTimesheet); // Debug log
+    
+    // Extract statistics from the stats object if it exists
+    const stats = apiTimesheet.stats || {};
+    
     return {
       id: apiTimesheet.timesheetId,
       employeeId: apiTimesheet.employeeId,
@@ -235,11 +240,15 @@ export function useApproveTimesheetStore() {
       status: mapApiStatusToFrontend(apiTimesheet.status),
       submittedAt: apiTimesheet.submittedAt,
       lastUpdated: apiTimesheet.updatedAt,
-      entryCount: 0, // Will be populated when needed
-      totalDays: 0,
-      workingDays: 0,
-      leaveDays: 0,
-      leaveBreakdown: {},
+      
+      // ENHANCED: Use actual statistics from API
+      totalEntries: stats.totalEntries || 0,
+      workingDays: stats.workingDays || 0,
+      leaveDays: stats.leaveDays || 0,
+      totalHours: stats.totalHours || 0,
+      leaveBreakdown: stats.leaveBreakdown || {},
+      
+      // Approval details
       approvedBy: apiTimesheet.approvedBy,
       approvedAt: apiTimesheet.approvedAt,
       approvalComments: apiTimesheet.approvalComments || ''

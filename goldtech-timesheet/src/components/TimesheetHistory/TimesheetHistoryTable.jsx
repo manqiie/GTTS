@@ -150,6 +150,7 @@ function TimesheetHistoryTable({
   return (
     <Table
       columns={columns}
+      locale={{ emptyText: null }}
       dataSource={history}
       loading={loading}
       rowKey="timesheetId"

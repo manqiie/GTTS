@@ -1,4 +1,4 @@
-// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx - Updated with Summary
+// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx - Updated with correct statistics
 import React from 'react';
 import { Table, Tag, Button } from 'antd';
 import dayjs from 'dayjs';
@@ -52,7 +52,7 @@ function ApproveTimesheetTable({
             <span style={{ color: '#666' }}> leave days</span>
           </div>
           <div>
-            <span style={{ fontWeight: 500 }}>{record.totalEntries || record.entryCount || 0}</span>
+            <span style={{ fontWeight: 500 }}>{record.totalEntries || 0}</span>
             <span style={{ color: '#666' }}> total entries</span>
           </div>
         </div>

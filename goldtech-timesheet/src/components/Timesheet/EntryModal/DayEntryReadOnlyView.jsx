@@ -1,9 +1,10 @@
-// DayEntryReadOnlyView.jsx - Read-Only Display Component
+// DayEntryReadOnlyView.jsx - Read-Only Display Component using DocumentViewer
 import React from 'react';
-import { Card, Row, Col, Tag, Space, Button, Alert, Typography } from 'antd';
-import { CalendarOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Tag, Space, Alert, Typography } from 'antd';
+import { CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { entryTypeConfig } from './entryTypeConfig';
+import DocumentViewer from '../../Common/DocumentViewer';
 
 const { Text, Title } = Typography;
 
@@ -46,13 +47,16 @@ function DayEntryReadOnlyView({ date, existingEntry }) {
         <OffInLieuCard existingEntry={existingEntry} />
       )}
 
-      {/* Supporting Documents */}
+      {/* Supporting Documents - Using DocumentViewer */}
       {hasDocuments && (
-        <DocumentsCard documents={existingEntry.supportingDocuments} />
+        <DocumentsCard 
+          documents={existingEntry.supportingDocuments}
+          documentReference={existingEntry.documentReference}
+        />
       )}
 
-      {/* Document Reference */}
-      {existingEntry.documentReference && (
+      {/* Document Reference - Only show if no documents but has reference */}
+      {!hasDocuments && existingEntry.documentReference && (
         <DocumentReferenceAlert documentReference={existingEntry.documentReference} />
       )}
 
@@ -155,10 +159,7 @@ const WorkingHoursCard = ({ existingEntry }) => {
             </div>
           </div>
         </Col>
-     
       </Row>
-      
-
     </Card>
   );
 };
@@ -175,39 +176,18 @@ const OffInLieuCard = ({ existingEntry }) => (
   </Card>
 );
 
-// Documents Card Component
-const DocumentsCard = ({ documents }) => (
+// Documents Card Component - SIMPLIFIED using DocumentViewer
+const DocumentsCard = ({ documents, documentReference }) => (
   <Card title="Supporting Documents" style={{ marginBottom: 20 }}>
-    <div>
-      {documents.map((doc, index) => (
-        <div key={index} style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          padding: '12px',
-          border: '1px solid #f0f0f0',
-          borderRadius: '6px',
-          marginBottom: index < documents.length - 1 ? 8 : 0
-        }}>
-          <Space>
-            <FileTextOutlined />
-            <div>
-              <div style={{ fontWeight: 500 }}>{doc.name}</div>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {doc.type} • {(doc.size / 1024).toFixed(1)} KB
-              </Text>
-            </div>
-          </Space>
-          <Button size="small" type="link">
-            Download
-          </Button>
-        </div>
-      ))}
-    </div>
+    <DocumentViewer 
+      documents={documents}
+      documentReference={documentReference}
+      size="default" // or "small" if you prefer smaller buttons
+    />
   </Card>
 );
 
-// Document Reference Alert Component
+// Document Reference Alert Component - Only used when no documents but has reference
 const DocumentReferenceAlert = ({ documentReference }) => (
   <Alert
     message="Document Reference"

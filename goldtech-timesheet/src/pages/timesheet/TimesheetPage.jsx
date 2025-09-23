@@ -336,9 +336,7 @@ function TimesheetPage() {
               >
                 Go to Current Month
               </Button>
-              <Button onClick={handleViewHistory}>
-                View History
-              </Button>
+           
             </Space>
           </div>
         </Card>
@@ -382,12 +380,7 @@ function TimesheetPage() {
           </Col>
           <Col>
             <Space>
-              <Button 
-                icon={<HistoryOutlined />} 
-                onClick={handleViewHistory}
-              >
-                View History
-              </Button>
+              
        
               {viewingMode === 'editable' && canEdit && timesheetStatus === 'draft' && (
                 <Button 

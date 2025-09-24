@@ -14,7 +14,7 @@ import { DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 /**
- * WorkingHoursSelector Component - Updated with PM to AM support and 5-minute intervals
+ * WorkingHoursSelector Component - Updated without hour calculation and simplified custom flow
  */
 function WorkingHoursSelector({
   customHoursList = [],
@@ -114,7 +114,7 @@ function WorkingHoursSelector({
   };
 
   /**
-   * Generate hours options with delete functionality for custom hours
+   * Generate hours options with delete functionality for custom hours - WITHOUT hour calculation
    */
   const getHoursOptions = () => {
     const customOptions = customHoursList.map(custom => ({
@@ -135,7 +135,7 @@ function WorkingHoursSelector({
           }}
         >
           <span>
-            {formatTimeDisplay(custom.startTime, custom.endTime)}
+            {formatTimeDisplaySimple(custom.startTime, custom.endTime)}
           </span>
           <Popconfirm
             title="Delete this custom time?"
@@ -172,19 +172,13 @@ function WorkingHoursSelector({
   };
 
   /**
-   * Format time display with duration calculation
+   * Format time display WITHOUT duration calculation
    */
-  const formatTimeDisplay = (startTime, endTime) => {
+  const formatTimeDisplaySimple = (startTime, endTime) => {
     const start = dayjs(startTime, 'HH:mm').format('h:mm A');
     const end = dayjs(endTime, 'HH:mm').format('h:mm A');
     
-    const duration = calculateDuration(
-      dayjs(startTime, 'HH:mm'), 
-      dayjs(endTime, 'HH:mm')
-    );
-    
-    const durationText = duration ? ` (${duration.formatted})` : '';
-    return `${start} - ${end}${durationText}`;
+    return `${start} - ${end}`;
   };
 
   /**
@@ -250,10 +244,6 @@ function WorkingHoursSelector({
       return { isValid: false, error: 'Invalid time range' };
     }
 
-    // Maximum 16 hours per shift
-    if (duration.totalMinutes > 16 * 60) {
-      return { isValid: false, error: 'Working hours cannot exceed 16 hours per shift' };
-    }
 
     // Minimum 30 minutes
     if (duration.totalMinutes < 30) {
@@ -264,9 +254,9 @@ function WorkingHoursSelector({
   };
 
   /**
-   * Save custom working hours
+   * Save custom working hours and automatically set form fields - NO BUTTONS NEEDED
    */
-  const handleSaveCustomHours = () => {
+  const saveCustomHours = () => {
     let finalStartTime = customStartTime;
     let finalEndTime = customEndTime;
 
@@ -277,7 +267,7 @@ function WorkingHoursSelector({
         finalStartTime = parsedStart;
       } else {
         message.error('Invalid start time format. Use formats like "9:30 AM" or "21:30"');
-        return;
+        return false;
       }
     }
 
@@ -287,7 +277,7 @@ function WorkingHoursSelector({
         finalEndTime = parsedEnd;
       } else {
         message.error('Invalid end time format. Use formats like "5:30 PM" or "17:30"');
-        return;
+        return false;
       }
     }
 
@@ -295,7 +285,7 @@ function WorkingHoursSelector({
     const validation = validateCustomHours(finalStartTime, finalEndTime);
     if (!validation.isValid) {
       message.warning(validation.error);
-      return;
+      return false;
     }
 
     const startTime = finalStartTime.format('HH:mm');
@@ -309,7 +299,7 @@ function WorkingHoursSelector({
 
     if (isDuplicate) {
       message.warning('This time combination already exists');
-      return;
+      return false;
     }
 
     const customId = `custom-${Date.now()}`;
@@ -317,7 +307,7 @@ function WorkingHoursSelector({
     
     onAddCustomHours && onAddCustomHours(newCustomHours);
     
-    // Automatically select the new custom hours
+    // Automatically select the new custom hours and set form fields
     onHoursChange && onHoursChange(customId);
     form && form.setFieldsValue({
       startTime: finalStartTime,
@@ -328,8 +318,28 @@ function WorkingHoursSelector({
     setStartTimeInput('');
     setEndTimeInput('');
     
-    message.success(`Custom working hours added: ${formatTimeDisplay(startTime, endTime)}`);
+    message.success(`Custom working hours added: ${formatTimeDisplaySimple(startTime, endTime)}`);
+    return true;
   };
+
+  // Expose the saveCustomHours function for external use (like from modal buttons)
+  React.useImperativeHandle(React.forwardRef, () => ({
+    saveCustomHours
+  }));
+
+  // Auto-save when both times are selected via TimePicker
+  React.useEffect(() => {
+    if (customStartTime && customEndTime && showCustomInput) {
+      // Auto-validate and set form fields without saving to database yet
+      const validation = validateCustomHours(customStartTime, customEndTime);
+      if (validation.isValid && form) {
+        form.setFieldsValue({
+          startTime: customStartTime,
+          endTime: customEndTime
+        });
+      }
+    }
+  }, [customStartTime, customEndTime, showCustomInput, form]);
 
   return (
     <>
@@ -342,68 +352,63 @@ function WorkingHoursSelector({
         dropdownStyle={{ minWidth: 350 }}
       />
 
-      {/* Enhanced Custom Hours Input */}
+      {/* Simplified Custom Hours Input - NO ACTION BUTTONS */}
       {showCustomInput && (
-        <>
-          <div style={{ marginTop: 16 }}>
-            {/* Time Picker Row with 5-minute intervals */}
-            <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
-              <Col span={10}>
-                <TimePicker
-                  value={customStartTime}
-                  onChange={setCustomStartTime}
-                  format="h:mm A"
-                  use12Hours
-                  placeholder="Start Time"
-                  style={{ width: '100%' }}
-                  minuteStep={5}
-                  showNow={false}
-                />
-              </Col>
-              <Col span={10}>
-                <TimePicker
-                  value={customEndTime}
-                  onChange={setCustomEndTime}
-                  format="h:mm A"
-                  use12Hours
-                  placeholder="End Time"
-                  style={{ width: '100%' }}
-                  minuteStep={5}
-                  showNow={false}
-                />
-              </Col>
-              <Col span={4}>
-                <Button 
-                  type="text" 
-                  size="small" 
-                  icon={<CloseOutlined />}
-                  onClick={() => {
-                    setShowCustomInput(false);
-                    onHoursChange && onHoursChange(null);
-                  }}
-                  style={{ color: '#999' }}
-                />
-              </Col>
-            </Row>
+        <div style={{ marginTop: 16 }}>
+          {/* Time Picker Row with 5-minute intervals */}
+          <Row gutter={16} align="middle">
+            <Col span={11}>
+              <TimePicker
+                value={customStartTime}
+                onChange={setCustomStartTime}
+                format="h:mm A"
+                use12Hours
+                placeholder="Start Time"
+                style={{ width: '100%' }}
+                minuteStep={5}
+                showNow={false}
+              />
+            </Col>
+            <Col span={11}>
+              <TimePicker
+                value={customEndTime}
+                onChange={setCustomEndTime}
+                format="h:mm A"
+                use12Hours
+                placeholder="End Time"
+                style={{ width: '100%' }}
+                minuteStep={5}
+                showNow={false}
+              />
+            </Col>
+            <Col span={2}>
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<CloseOutlined />}
+                onClick={() => {
+                  setShowCustomInput(false);
+                  onHoursChange && onHoursChange(null);
+                  form && form.setFieldsValue({
+                    startTime: null,
+                    endTime: null
+                  });
+                }}
+                style={{ color: '#999' }}
+              />
+            </Col>
+          </Row>
 
-            {/* Action Buttons */}
-            <Row gutter={16} align="middle">
-              <Col span={24}>
-                <Space>
-                  <Button type="primary" onClick={handleSaveCustomHours}>
-                    Save & Select
-                  </Button>
-                  <Button onClick={() => {
-                    setShowCustomInput(false);
-                    onHoursChange && onHoursChange(null);
-                  }}>
-                    Cancel
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
+          {/* Helper text */}
+          <div style={{ 
+            fontSize: '12px', 
+            color: '#666', 
+            marginTop: '8px',
+            textAlign: 'center'
+          }}>
+            Select your custom working hours, then click "Add Entry" to save
           </div>
-        </>
+        </div>
       )}
     </>
   );

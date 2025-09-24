@@ -260,10 +260,11 @@ function TimesheetPage() {
       return (
         <Alert
           message="Timesheet Rejected"
-          description="This timesheet was rejected and can now be edited and resubmitted."
+          description="This timesheet was rejected, please resubmit again."
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
+          
         />
       );
     }

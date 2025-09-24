@@ -172,12 +172,7 @@ function TimesheetHistoryPage() {
 
       {/* Custom styles for row highlighting */}
       <style jsx global>{`
-        .approved-timesheet-row {
-          background-color: #f6ffed !important;
-        }
-        .approved-timesheet-row:hover td {
-          background-color: #e6f7e0 !important;
-        }
+       
         
         .rejected-timesheet-row {
           background-color: #fff2f0 !important;

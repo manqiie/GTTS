@@ -10,6 +10,7 @@ const API_BASE_URL = 'http://localhost:8080/api';
 export function useTimesheetStore(year, month) {
   const [entries, setEntries] = useState({});
   const [draftEntries, setDraftEntries] = useState({}); // Local draft changes
+  const [timesheetData, setTimesheetData] = useState(null);
   const [customHours, setCustomHours] = useState([]);
   const [defaultHours, setDefaultHoursState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -133,7 +134,7 @@ export function useTimesheetStore(year, month) {
   }, []);
 
   /**
-   * Load timesheet entries for current month
+   * Load timesheet data from API - UPDATED to store full timesheet data
    */
   const loadTimesheetData = async () => {
     setLoading(true);
@@ -142,6 +143,11 @@ export function useTimesheetStore(year, month) {
       
       if (response.success && response.data) {
         const timesheetData = response.data;
+        
+        // Store full timesheet data including comments
+        setTimesheetData(timesheetData);
+        
+        // Set individual pieces of data as before
         setEntries(timesheetData.entries || {});
         setTimesheetStatus(timesheetData.status || 'draft');
       }
@@ -149,6 +155,7 @@ export function useTimesheetStore(year, month) {
       console.error('Error loading timesheet data:', error);
       message.error('Failed to load timesheet data');
       setEntries({});
+      setTimesheetData(null);
     } finally {
       setLoading(false);
     }
@@ -543,6 +550,7 @@ export function useTimesheetStore(year, month) {
 
   return {
     entries: getMergedEntries(), // Return merged entries for display
+    timesheetData,
     customHours,
     defaultHours,
     loading,

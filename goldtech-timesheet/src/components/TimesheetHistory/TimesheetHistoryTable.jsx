@@ -118,7 +118,6 @@ function TimesheetHistoryTable({
             <span style={{ 
               fontSize: '12px',
               color: '#666',
-              maxWidth: '200px',
               display: 'block',
               whiteSpace: 'nowrap',
               overflow: 'hidden',

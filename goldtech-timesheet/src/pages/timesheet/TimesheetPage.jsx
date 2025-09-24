@@ -1,4 +1,4 @@
-// Updated TimesheetPage.jsx - With Save Draft functionality
+// Complete TimesheetPage.jsx - With Save Draft functionality and Rejection Comments
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Space, Button, message, Spin, Alert } from 'antd';
 import { SaveOutlined, SendOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -13,7 +13,7 @@ import dayjs from 'dayjs';
 const { Title } = Typography;
 
 /**
- * Updated TimesheetPage with Draft Mode
+ * Complete TimesheetPage with Draft Mode and Rejection Comments Display
  */
 function TimesheetPage() {
   const navigate = useNavigate();
@@ -32,9 +32,10 @@ function TimesheetPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedDates, setSelectedDates] = useState([]);
   
-  // Updated hook with draft functionality
+  // Updated hook with draft functionality and full timesheet data
   const {
     entries,
+    timesheetData, // Full timesheet data including rejection comments
     customHours,
     defaultHours,
     loading,
@@ -253,22 +254,45 @@ function TimesheetPage() {
   };
 
   /**
-   * Get status-based alert message
+   * Get status-based alert message with rejection comments
    */
   const getStatusAlert = () => {
     if (timesheetStatus === 'rejected') {
+      // Get rejection comments from timesheet data
+      const rejectionComments = timesheetData?.approvalComments || 
+                               timesheetData?.rejectionComments ||
+                               timesheetData?.comments;
+      
       return (
         <Alert
           message="Timesheet Rejected"
-          description="This timesheet was rejected, please resubmit again."
+          description={
+            <div>
+              <div style={{ marginBottom: 8 }}>
+                This timesheet was rejected. Please review the comments below and resubmit.
+                <div style={{ 
+                    fontWeight: 'bold', 
+                    color: '#cf1322', 
+                    fontSize: '13px', 
+                    marginTop:'10px',
+                    
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    Supervisor Comments:
+                  </div>
+                {rejectionComments}
+              </div>
+              
+            </div>
+          }
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          
+          closable={false}
         />
       );
     }
-  
 
     return null;
   };
@@ -321,7 +345,7 @@ function TimesheetPage() {
       {/* Page Header */}
       <TimesheetHeader {...getHeaderProps()} />
 
-      {/* Status Alert */}
+      {/* Status Alert with Rejection Comments */}
       {getStatusAlert()}
 
       {/* Main Calendar Card */}
@@ -351,9 +375,7 @@ function TimesheetPage() {
             </div>
           </Col>
           <Col>
-            <Space>
-             
-              
+            <Space>            
               {/* Save Draft Button - Only show for editable timesheets */}
               {viewingMode === 'editable' && canEdit && (
                 <Button 
@@ -362,8 +384,10 @@ function TimesheetPage() {
                   loading={loading}
                   disabled={!hasUnsavedChanges}
                   type={hasUnsavedChanges ? 'primary' : 'default'}
+                  title={hasUnsavedChanges ? 'Save draft changes to database' : 'No unsaved changes'}
                 >
                   Save Draft
+                  {hasUnsavedChanges}
                 </Button>
               )}
               
@@ -374,6 +398,7 @@ function TimesheetPage() {
                   icon={<SendOutlined />} 
                   onClick={handleSubmitForApproval}
                   loading={loading}
+                  title="Submit timesheet for supervisor approval"
                 >
                   {submitButtonText}
                 </Button>
@@ -410,7 +435,7 @@ function TimesheetPage() {
           />
         </div>
 
-        {/* Mode-specific message */}
+        {/* Mode-specific messages */}
         {viewingMode === 'historical' && (
           <div style={{ 
             marginTop: 16, 
@@ -421,7 +446,7 @@ function TimesheetPage() {
             textAlign: 'center' 
           }}>
             <span style={{ color: '#1890ff', fontSize: '14px' }}>
-              This is a historical view of your timesheet.
+              📅 This is a historical view of your timesheet for reference.
             </span>
           </div>
         )}
@@ -435,7 +460,7 @@ function TimesheetPage() {
             textAlign: 'center' 
           }}>
             <span style={{ color: '#666', fontSize: '14px' }}>
-              This timesheet is in read-only mode. 
+              🔒 This timesheet is in read-only mode. 
               {timesheetStatus === 'submitted' && ' It is currently awaiting approval.'}
               {timesheetStatus === 'approved' && ' It has been approved and finalized.'}
             </span>

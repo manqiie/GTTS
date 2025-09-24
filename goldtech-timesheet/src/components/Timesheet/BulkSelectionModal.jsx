@@ -1,4 +1,4 @@
-// Fixed BulkSelectionModal.jsx - Added missing imports and fixed component references
+// Updated BulkSelectionModal.jsx - Draft Mode Compatible
 import React, { useState, useEffect } from 'react';
 import { 
   Modal, 
@@ -13,7 +13,7 @@ import {
   Tag,
   Typography,
   Alert,
-  Select // ADDED MISSING IMPORT
+  Select
 } from 'antd';
 import dayjs from 'dayjs';
 import SharedEntryTypeSelector from './EntryModal/SharedEntryTypeSelector';
@@ -103,7 +103,7 @@ function BulkSelectionModal({
     };
   };
 
-  // Handle form submission - using shared validation logic
+  // Handle form submission - Updated for draft mode (no validation message)
   const handleSubmit = () => {
     form.validateFields()
       .then(values => {
@@ -135,6 +135,7 @@ function BulkSelectionModal({
           );
         });
 
+        // Call onSave - this will now save to draft instead of API
         onSave(bulkData);
         resetForm();
       })
@@ -225,8 +226,20 @@ function BulkSelectionModal({
           primaryDocumentDay={primaryDocumentDay}
         />
 
-     
-
+        {/* Off in Lieu Progress Indicator */}
+        {offInLieuStats && (
+          <Alert
+            message={`Off in Lieu Progress: ${offInLieuStats.completed}/${offInLieuStats.total} days configured`}
+            description={
+              offInLieuStats.remaining > 0 
+                ? `Please set earned dates for the remaining ${offInLieuStats.remaining} day(s)`
+                : "All days have earned dates configured"
+            }
+            type={offInLieuStats.remaining === 0 ? "success" : "warning"}
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+        )}
       </Form>
     </Modal>
   );
@@ -353,7 +366,5 @@ const IndividualDayItem = ({
     )}
   </div>
 );
-
-
 
 export default BulkSelectionModal;

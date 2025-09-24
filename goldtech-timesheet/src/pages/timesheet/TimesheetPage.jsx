@@ -1,7 +1,7 @@
-// Fixed TimesheetPage.jsx - Allow viewing any timesheet, restrict editing based on rules
+// Updated TimesheetPage.jsx - With Save Draft functionality
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Space, Button, message, Spin, Alert } from 'antd';
-import { SaveOutlined, SendOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import { SaveOutlined, SendOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import TimesheetHeader from '../../components/Timesheet/TimesheetHeader';
 import TimesheetCalendar from '../../components/Timesheet/TimesheetCalendar';
@@ -13,7 +13,7 @@ import dayjs from 'dayjs';
 const { Title } = Typography;
 
 /**
- * Updated TimesheetPage - Allow viewing any timesheet, restrict editing based on business rules
+ * Updated TimesheetPage with Draft Mode
  */
 function TimesheetPage() {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ function TimesheetPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedDates, setSelectedDates] = useState([]);
   
-  // Updated hook with new functionality
+  // Updated hook with draft functionality
   const {
     entries,
     customHours,
@@ -45,14 +45,16 @@ function TimesheetPage() {
     canEdit,
     showSubmitButton,
     submitButtonText,
+    hasUnsavedChanges,
     saveEntry,
     saveBulkEntries,
+    deleteEntry,
+    saveDraft, // New method
     submitTimesheet,
     setDefaultHours: updateDefaultHours,
     addCustomHours,
     removeCustomHours,
     clearMonth,
-    deleteEntry,
     getMonthStats,
     loadTimesheetData,
     loadAvailableMonths,
@@ -69,11 +71,6 @@ function TimesheetPage() {
     const currentDate = dayjs();
     const timesheetDate = dayjs().year(selectedYear).month(selectedMonth - 1);
     
-    // Allow viewing if:
-    // 1. It's current month or available month (handled by isCurrentOrAvailableMonth)
-    // 2. It's a past month with timesheet data
-    // 3. It's not more than 2 years old (reasonable limit)
-    
     return timesheetDate.isBefore(currentDate) && 
            timesheetDate.isAfter(currentDate.subtract(2, 'year'));
   };
@@ -81,11 +78,11 @@ function TimesheetPage() {
   // Determine the viewing mode
   const getViewingMode = () => {
     if (isCurrentOrAvailableMonth()) {
-      return 'editable'; // Can edit based on canEdit flag
+      return 'editable';
     } else if (isHistoricalTimesheet()) {
-      return 'historical'; // View-only mode
+      return 'historical';
     } else {
-      return 'unavailable'; // Completely unavailable
+      return 'unavailable';
     }
   };
 
@@ -113,7 +110,7 @@ function TimesheetPage() {
 
     // For editable timesheets
     setSelectedDate(date);
-    setSelectedDates([]); // Clear bulk selection
+    setSelectedDates([]);
     setModalVisible(true);
   };
 
@@ -128,7 +125,7 @@ function TimesheetPage() {
 
     if (dates.length > 1) {
       setSelectedDates(dates);
-      setSelectedDate(null); // Clear single selection
+      setSelectedDate(null);
       setBulkModalVisible(true);
     } else if (dates.length === 1) {
       handleDayClick(dates[0]);
@@ -136,53 +133,57 @@ function TimesheetPage() {
   };
 
   /**
-   * Handle save entry from modal (only for editable)
+   * Handle save entry to draft (no API call)
    */
-  const handleSaveEntry = async (entryData) => {
+  const handleSaveEntry = (entryData) => {
     if (viewingMode !== 'editable') {
       message.warning('This timesheet cannot be edited');
       return;
     }
 
     try {
-      await saveEntry(entryData);
+      saveEntry(entryData);
       setModalVisible(false);
+      message.success('Entry saved to draft');
     } catch (error) {
       console.error('Error saving entry:', error);
     }
   };
 
   /**
-   * Handle save bulk entries from modal (only for editable)
+   * Handle save bulk entries to draft (no API call)
    */
-  const handleSaveBulkEntries = async (entriesArray) => {
+  const handleSaveBulkEntries = (entriesArray) => {
     if (viewingMode !== 'editable') {
       message.warning('This timesheet cannot be edited');
       return;
     }
 
     try {
-      await saveBulkEntries(entriesArray);
+      saveBulkEntries(entriesArray);
       setBulkModalVisible(false);
+      message.success(`${entriesArray.length} entries saved to draft`);
     } catch (error) {
       console.error('Error saving bulk entries:', error);
     }
   };
 
   /**
-   * Handle timesheet submission
+   * Handle save draft to database
+   */
+  const handleSaveDraft = async () => {
+    try {
+      await saveDraft();
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    }
+  };
+
+  /**
+   * Handle timesheet submission (save + submit)
    */
   const handleSubmitForApproval = async () => {
     try {
-      // Get current stats to validate
-      const stats = await getMonthStats();
-      const workingDays = getWorkingDaysInMonth(selectedYear, selectedMonth);
-      
-      if (stats.totalEntries < workingDays.length * 0.8) {
-        message.warning('Please complete at least 80% of working days before submitting');
-        return;
-      }
-
       await submitTimesheet();
       
       // Refresh available months after submission
@@ -220,13 +221,6 @@ function TimesheetPage() {
   };
 
   /**
-   * Navigate to history page
-   */
-  const handleViewHistory = () => {
-    navigate('/history');
-  };
-
-  /**
    * Get appropriate header props based on viewing mode
    */
   const getHeaderProps = () => {
@@ -248,7 +242,7 @@ function TimesheetPage() {
         year: selectedYear,
         month: selectedMonth,
         status: timesheetStatus,
-        availableMonths: [], // Don't show available months restriction
+        availableMonths: [],
         onYearChange: handleYearChange,
         onMonthChange: handleMonthChange,
         canSubmit: false,
@@ -262,8 +256,6 @@ function TimesheetPage() {
    * Get status-based alert message
    */
   const getStatusAlert = () => {
-    
-
     if (timesheetStatus === 'rejected') {
       return (
         <Alert
@@ -272,30 +264,10 @@ function TimesheetPage() {
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          action={
-            showSubmitButton && (
-              <Button size="small" type="primary" onClick={handleSubmitForApproval}>
-                Resubmit
-              </Button>
-            )
-          }
         />
       );
     }
-    
-
-    
-    if (timesheetStatus === 'approved') {
-      return (
-        <Alert
-          message="Approved"
-          description="This timesheet has been approved and is now final."
-          type="success"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      );
-    }
+  
 
     return null;
   };
@@ -336,7 +308,6 @@ function TimesheetPage() {
               >
                 Go to Current Month
               </Button>
-           
             </Space>
           </div>
         </Card>
@@ -380,16 +351,22 @@ function TimesheetPage() {
           </Col>
           <Col>
             <Space>
+             
               
-       
-              {viewingMode === 'editable' && canEdit && timesheetStatus === 'draft' && (
+              {/* Save Draft Button - Only show for editable timesheets */}
+              {viewingMode === 'editable' && canEdit && (
                 <Button 
                   icon={<SaveOutlined />} 
-                  onClick={() => message.success('Timesheet automatically saved as draft')}
+                  onClick={handleSaveDraft}
+                  loading={loading}
+                  disabled={!hasUnsavedChanges}
+                  type={hasUnsavedChanges ? 'primary' : 'default'}
                 >
                   Save Draft
                 </Button>
               )}
+              
+              {/* Submit Button */}
               {viewingMode === 'editable' && showSubmitButton && (
                 <Button 
                   type="primary" 
@@ -442,7 +419,9 @@ function TimesheetPage() {
             border: '1px solid #91d5ff',
             textAlign: 'center' 
           }}>
-            
+            <span style={{ color: '#1890ff', fontSize: '14px' }}>
+              This is a historical view of your timesheet.
+            </span>
           </div>
         )}
 

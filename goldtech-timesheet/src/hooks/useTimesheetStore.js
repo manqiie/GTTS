@@ -1,14 +1,15 @@
-// src/hooks/useTimesheetStore.js - Updated with new submission rules and history
+// src/hooks/useTimesheetStore.js - Updated with draft mode functionality
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
 /**
- * Updated useTimesheetStore Hook with Submission Rules & History
+ * Updated useTimesheetStore Hook with Draft Mode
  */
 export function useTimesheetStore(year, month) {
   const [entries, setEntries] = useState({});
+  const [draftEntries, setDraftEntries] = useState({}); // Local draft changes
   const [customHours, setCustomHours] = useState([]);
   const [defaultHours, setDefaultHoursState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,7 @@ export function useTimesheetStore(year, month) {
   const [availableMonths, setAvailableMonths] = useState([]);
   const [canSubmit, setCanSubmit] = useState(false);
   const [canResubmit, setCanResubmit] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Get auth token from localStorage
   const getAuthToken = () => {
@@ -57,6 +59,13 @@ export function useTimesheetStore(year, month) {
       console.error(`API request failed for ${endpoint}:`, error);
       throw error;
     }
+  };
+
+  /**
+   * Get merged entries (draft + saved)
+   */
+  const getMergedEntries = () => {
+    return { ...entries, ...draftEntries };
   };
 
   /**
@@ -110,6 +119,9 @@ export function useTimesheetStore(year, month) {
       loadTimesheetData();
       loadWorkingHoursPresets();
       checkSubmissionEligibility(year, month);
+      // Clear draft entries when switching months
+      setDraftEntries({});
+      setHasUnsavedChanges(false);
     }
   }, [year, month]);
 
@@ -174,65 +186,109 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Save single entry to API
+   * Save single entry to DRAFT (local state only)
    */
-  const saveEntry = async (entryData) => {
-    setLoading(true);
-    try {
-      const response = await apiRequest('/timesheets/entries', {
-        method: 'POST',
-        body: JSON.stringify(entryData)
-      });
-
-      if (response.success && response.data) {
-        // Update local state
-        const newEntries = {
-          ...entries,
-          [entryData.date]: response.data
-        };
-        setEntries(newEntries);
-        
-        message.success('Entry saved successfully');
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Failed to save entry');
-      }
-    } catch (error) {
-      console.error('Error saving entry:', error);
-      message.error('Failed to save entry: ' + error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+  const saveEntryToDraft = (entryData) => {
+    const newDraftEntries = {
+      ...draftEntries,
+      [entryData.date]: entryData
+    };
+    setDraftEntries(newDraftEntries);
+    setHasUnsavedChanges(true);
+    return entryData;
   };
 
   /**
-   * Save multiple entries (bulk operation) to API
+   * Save multiple entries to DRAFT (local state only)
    */
-  const saveBulkEntries = async (entriesArray) => {
+  const saveBulkEntriesToDraft = (entriesArray) => {
+    const newDraftEntries = { ...draftEntries };
+    entriesArray.forEach(entry => {
+      newDraftEntries[entry.date] = entry;
+    });
+    setDraftEntries(newDraftEntries);
+    setHasUnsavedChanges(true);
+    return entriesArray;
+  };
+
+  /**
+   * Delete entry from DRAFT (local state only)
+   */
+  const deleteEntryFromDraft = (date) => {
+    const newDraftEntries = { ...draftEntries };
+    
+    // If the entry exists in saved entries, we need to mark it as deleted
+    if (entries[date]) {
+      newDraftEntries[date] = null; // Mark for deletion
+    } else {
+      // If it only exists in draft, just remove it
+      delete newDraftEntries[date];
+    }
+    
+    setDraftEntries(newDraftEntries);
+    setHasUnsavedChanges(true);
+  };
+
+  /**
+   * Save draft entries to database
+   */
+  const saveDraft = async () => {
+    if (!hasUnsavedChanges || Object.keys(draftEntries).length === 0) {
+      message.info('No changes to save');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await apiRequest('/timesheets/entries/bulk', {
-        method: 'POST',
-        body: JSON.stringify(entriesArray)
+      const entriesToSave = [];
+      const entriesToDelete = [];
+
+      // Process draft entries
+      Object.entries(draftEntries).forEach(([date, entryData]) => {
+        if (entryData === null) {
+          // Entry marked for deletion
+          entriesToDelete.push(date);
+        } else {
+          // Entry to save/update
+          entriesToSave.push(entryData);
+        }
       });
 
-      if (response.success && response.data) {
-        // Update local state
-        const newEntries = { ...entries };
-        response.data.forEach(entry => {
-          newEntries[entry.date] = entry;
+      // Delete entries first
+      for (const date of entriesToDelete) {
+        try {
+          await apiRequest(`/timesheets/entries/${date}`, {
+            method: 'DELETE'
+          });
+        } catch (error) {
+          console.error(`Error deleting entry for ${date}:`, error);
+          // Continue with other operations
+        }
+      }
+
+      // Save/update entries
+      if (entriesToSave.length > 0) {
+        const response = await apiRequest('/timesheets/entries/bulk', {
+          method: 'POST',
+          body: JSON.stringify(entriesToSave)
         });
-        setEntries(newEntries);
-        
-        message.success(`${response.data.length} entries saved successfully`);
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Failed to save bulk entries');
+
+        if (!response.success) {
+          throw new Error(response.message || 'Failed to save entries');
+        }
       }
+
+      // Refresh data from server
+      await loadTimesheetData();
+      
+      // Clear draft entries
+      setDraftEntries({});
+      setHasUnsavedChanges(false);
+      
+      message.success('Draft saved successfully');
     } catch (error) {
-      console.error('Error saving bulk entries:', error);
-      message.error('Failed to save bulk entries: ' + error.message);
+      console.error('Error saving draft:', error);
+      message.error('Failed to save draft: ' + error.message);
       throw error;
     } finally {
       setLoading(false);
@@ -240,11 +296,69 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Submit timesheet for approval (with enhanced validation)
+   * Validate timesheet completeness for submission
+   */
+  const validateTimesheetForSubmission = () => {
+    const mergedEntries = getMergedEntries();
+    const entryDates = Object.keys(mergedEntries).filter(date => mergedEntries[date] !== null);
+    
+    // Get working days in month (excluding weekends)
+    const workingDays = getWorkingDaysInMonth(year, month);
+    const completedWorkingDays = entryDates.filter(date => {
+      const dayOfWeek = new Date(date).getDay();
+      return dayOfWeek !== 0 && dayOfWeek !== 6; // Not Sunday or Saturday
+    });
+
+    // Check if at least 80% of working days are completed
+    const completionRate = completedWorkingDays.length / workingDays.length;
+    
+    if (completionRate < 0.8) {
+      throw new Error(`Please complete at least 80% of working days before submitting. You have completed ${completedWorkingDays.length} out of ${workingDays.length} working days.`);
+    }
+
+    // Check for any entries with missing required data
+    const incompleteEntries = entryDates.filter(date => {
+      const entry = mergedEntries[date];
+      if (!entry) return false;
+
+      // Check working hours completeness
+      if (entry.type === 'working_hours') {
+        return !entry.startTime || !entry.endTime;
+      }
+
+      // Check off in lieu completeness
+      if (entry.type === 'off_in_lieu') {
+        return !entry.dateEarned;
+      }
+
+      // Check half day completeness
+      const halfDayTypes = ['annual_leave_halfday', 'childcare_leave_halfday', 'nopay_leave_halfday'];
+      if (halfDayTypes.includes(entry.type)) {
+        return !entry.halfDayPeriod;
+      }
+
+      return false;
+    });
+
+    if (incompleteEntries.length > 0) {
+      throw new Error(`Please complete all entry details before submitting. Incomplete entries on: ${incompleteEntries.join(', ')}`);
+    }
+  };
+
+  /**
+   * Submit timesheet for approval (with save and validation)
    */
   const submitTimesheet = async () => {
     setLoading(true);
     try {
+      // First validate completeness
+      validateTimesheetForSubmission();
+
+      // Save any unsaved changes first
+      if (hasUnsavedChanges) {
+        await saveDraft();
+      }
+
       // Check if submission is allowed
       const eligibility = await checkSubmissionEligibility(year, month);
       
@@ -265,6 +379,7 @@ export function useTimesheetStore(year, month) {
         setTimesheetStatus(response.data.status);
         setCanSubmit(false);
         setCanResubmit(false);
+        setHasUnsavedChanges(false);
         
         const actionWord = eligibility.canResubmit ? 'resubmitted' : 'submitted';
         message.success(`Timesheet ${actionWord} for approval`);
@@ -336,34 +451,6 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Delete single entry
-   */
-  const deleteEntry = async (date) => {
-    setLoading(true);
-    try {
-      const response = await apiRequest(`/timesheets/entries/${date}`, {
-        method: 'DELETE'
-      });
-
-      if (response.success) {
-        const newEntries = { ...entries };
-        delete newEntries[date];
-        setEntries(newEntries);
-        
-        message.success('Entry deleted successfully');
-      } else {
-        throw new Error(response.message || 'Failed to delete entry');
-      }
-    } catch (error) {
-      console.error('Error deleting entry:', error);
-      message.error('Failed to delete entry: ' + error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
    * Set default working hours (for frontend compatibility)
    */
   const setDefaultHours = (hours) => {
@@ -371,39 +458,39 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Clear all entries for current month (not typically used with API)
+   * Clear all entries for current month
    */
   const clearMonth = async () => {
-    // This would require a specific API endpoint or deleting all entries individually
-    // For now, just clear local state and reload
-    setEntries({});
+    setDraftEntries({});
+    setHasUnsavedChanges(false);
     await loadTimesheetData();
     message.info('Month data cleared');
   };
 
   /**
-   * Get statistics for current month
+   * Get statistics for current month (including draft entries)
    */
   const getMonthStats = async () => {
     try {
-      const response = await apiRequest(`/timesheets/${year}/${month}/stats`);
+      const mergedEntries = getMergedEntries();
+      const entryDates = Object.keys(mergedEntries).filter(date => mergedEntries[date] !== null);
       
-      if (response.success && response.data) {
-        return response.data;
-      }
-      
-      // Fallback: calculate from local entries
-      const entryDates = Object.keys(entries);
       const workingDays = entryDates.filter(date => {
-        const entry = entries[date];
-        return entry.type === 'working_hours';
+        const entry = mergedEntries[date];
+        return entry && entry.type === 'working_hours';
       });
       
       const totalHours = workingDays.reduce((total, date) => {
-        const entry = entries[date];
-        if (entry.startTime && entry.endTime) {
+        const entry = mergedEntries[date];
+        if (entry && entry.startTime && entry.endTime) {
           const start = new Date(`2000-01-01T${entry.startTime}:00`);
-          const end = new Date(`2000-01-01T${entry.endTime}:00`);
+          let end = new Date(`2000-01-01T${entry.endTime}:00`);
+          
+          // Handle overnight shifts
+          if (end <= start) {
+            end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+          }
+          
           const hours = (end - start) / (1000 * 60 * 60);
           return total + hours;
         }
@@ -415,8 +502,8 @@ export function useTimesheetStore(year, month) {
         workingDays: workingDays.length,
         totalHours: totalHours,
         leaveDays: entryDates.filter(date => {
-          const type = entries[date].type;
-          return ['annual_leave', 'medical_leave', 'off_in_lieu'].includes(type);
+          const entry = mergedEntries[date];
+          return entry && !['working_hours', 'day_off'].includes(entry.type);
         }).length
       };
     } catch (error) {
@@ -449,13 +536,13 @@ export function useTimesheetStore(year, month) {
    */
   const getSubmitButtonText = () => {
     if (canResubmit) {
-      return 'Resubmit for Approval';
+      return 'Submit for Approval';
     }
     return 'Submit for Approval';
   };
 
   return {
-    entries,
+    entries: getMergedEntries(), // Return merged entries for display
     customHours,
     defaultHours,
     loading,
@@ -466,23 +553,47 @@ export function useTimesheetStore(year, month) {
     canEdit: canEdit(),
     showSubmitButton: showSubmitButton(),
     submitButtonText: getSubmitButtonText(),
-    saveEntry,
-    saveBulkEntries,
+    hasUnsavedChanges,
+    
+    // Updated methods for draft mode
+    saveEntry: saveEntryToDraft,
+    saveBulkEntries: saveBulkEntriesToDraft,
+    deleteEntry: deleteEntryFromDraft,
+    saveDraft, // New method
     submitTimesheet,
+    
+    // Existing methods
     setDefaultHours,
     addCustomHours,
     removeCustomHours,
     clearMonth,
-    deleteEntry,
     getMonthStats,
-    loadTimesheetData, // Expose for manual refresh
-    loadAvailableMonths, // Expose for manual refresh
-    checkSubmissionEligibility // Expose for validation
+    loadTimesheetData,
+    loadAvailableMonths,
+    checkSubmissionEligibility
   };
 }
 
 /**
- * Hook specifically for timesheet history
+ * Utility function to get working days in a month
+ */
+function getWorkingDaysInMonth(year, month) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0);
+  const workingDays = [];
+
+  for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday or Saturday
+      workingDays.push(new Date(date).toISOString().split('T')[0]);
+    }
+  }
+
+  return workingDays;
+}
+
+/**
+ * Hook specifically for timesheet history (unchanged)
  */
 export function useTimesheetHistory() {
   const [history, setHistory] = useState([]);

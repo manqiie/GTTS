@@ -1,4 +1,4 @@
-// DayEntryModal.jsx - Main Component (Simplified)
+// DayEntryModal.jsx - Updated for Draft Mode
 import React, { useState, useEffect } from 'react';
 import { Modal, message } from 'antd';
 import { EyeOutlined, EditOutlined } from '@ant-design/icons';
@@ -56,7 +56,7 @@ function DayEntryModal({
     }
   }, [visible, date, existingEntry]);
 
-  // Handle form submission
+  // Handle form submission - Updated for draft mode
   const handleSubmit = (formData) => {
     if (readOnly) {
       onCancel();
@@ -114,8 +114,18 @@ function DayEntryModal({
       })
     };
 
+    // Call onSave - this will now save to draft instead of API
     onSave(entryData);
     resetState();
+  };
+
+  // Handle delete - Updated for draft mode
+  const handleDelete = () => {
+    if (!readOnly && existingEntry && onSave) {
+      // For draft mode, we pass null to indicate deletion
+      onSave({ date: date, type: 'DELETE' });
+      resetState();
+    }
   };
 
   const resetState = () => {
@@ -173,6 +183,7 @@ function DayEntryModal({
           onRemoveCustomHours={onRemoveCustomHours}
           onSubmit={handleSubmit}
           onCancel={onCancel}
+          onDelete={existingEntry ? handleDelete : null} // Allow deletion for existing entries
         />
       )}
     </Modal>

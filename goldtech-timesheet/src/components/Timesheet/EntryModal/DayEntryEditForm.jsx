@@ -1,6 +1,7 @@
-// DayEntryEditForm.jsx - Editable Form Component
+// DayEntryEditForm.jsx - Updated with Delete Option for Draft Mode
 import React, { useEffect } from 'react';
-import { Form, Select, Input, DatePicker, Radio, Button } from 'antd';
+import { Form, Select, Input, DatePicker, Radio, Button, Popconfirm } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import WorkingHoursSelector from '../WorkingHoursSelector';
 import OffInLieuSelector from '../OffInLieuSelector';
@@ -27,7 +28,8 @@ function DayEntryEditForm({
   onAddCustomHours,
   onRemoveCustomHours,
   onSubmit,
-  onCancel
+  onCancel,
+  onDelete = null // New prop for delete functionality
 }) {
   const [form] = Form.useForm();
 
@@ -113,6 +115,13 @@ function DayEntryEditForm({
       });
   };
 
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    if (onDelete) {
+      onDelete();
+    }
+  };
+
   return (
     <div>
       <Form form={form} layout="vertical">
@@ -174,16 +183,41 @@ function DayEntryEditForm({
       {/* Form Actions */}
       <div style={{ 
         display: 'flex', 
-        justifyContent: 'flex-end', 
-        gap: 8, 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
         marginTop: 24,
         paddingTop: 16,
         borderTop: '1px solid #f0f0f0'
       }}>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button type="primary" onClick={handleFormSubmit}>
-          Save Entry
-        </Button>
+        {/* Delete Button - Only show for existing entries */}
+        <div>
+          {existingEntry && onDelete && (
+            <Popconfirm
+              title="Delete this entry?"
+              description="This will remove the entry from your timesheet."
+              onConfirm={handleDeleteConfirm}
+              okText="Yes, Delete"
+              cancelText="Cancel"
+              okButtonProps={{ danger: true }}
+            >
+              <Button 
+                icon={<DeleteOutlined />} 
+                danger 
+                type="text"
+              >
+                Delete Entry
+              </Button>
+            </Popconfirm>
+          )}
+        </div>
+
+        {/* Save/Cancel Buttons */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button type="primary" onClick={handleFormSubmit}>
+            {existingEntry ? 'Update Entry' : 'Add Entry'}
+          </Button>
+        </div>
       </div>
     </div>
   );

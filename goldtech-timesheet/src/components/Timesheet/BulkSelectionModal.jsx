@@ -197,13 +197,6 @@ function BulkSelectionModal({
         {/* Shared Documents Section */}
         {entryType && entryTypeConfig.requiresDocuments(entryType) && (
           <>
-            <Divider>Document Management</Divider>
-            <PrimaryDocumentSelector
-              dates={dates}
-              primaryDocumentDay={primaryDocumentDay}
-              setPrimaryDocumentDay={setPrimaryDocumentDay}
-            />
-
             {primaryDocumentDay && (
               <SharedDocumentsSection
                 entryType={entryType}
@@ -227,7 +220,7 @@ function BulkSelectionModal({
         />
 
         {/* Off in Lieu Progress Indicator */}
-        {offInLieuStats && (
+           {offInLieuStats && (
           <Alert
             message={`Off in Lieu Progress: ${offInLieuStats.completed}/${offInLieuStats.total} days configured`}
             description={
@@ -263,25 +256,6 @@ const SelectedDaysOverview = ({ dates, primaryDocumentDay }) => (
       ))}
     </div>
   </div>
-);
-
-const PrimaryDocumentSelector = ({ dates, primaryDocumentDay, setPrimaryDocumentDay }) => (
-  <Form.Item label="Primary Document Day">
-    <Select
-      value={primaryDocumentDay}
-      onChange={setPrimaryDocumentDay}
-      placeholder="Select which day will hold the supporting documents"
-    >
-      {dates.map(date => (
-        <Select.Option key={date} value={date}>
-          {dayjs(date).format('dddd, MMM DD, YYYY')}
-        </Select.Option>
-      ))}
-    </Select>
-    <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: 4 }}>
-      Other days will automatically reference this day's documents
-    </Text>
-  </Form.Item>
 );
 
 const IndividualDaysList = ({ 

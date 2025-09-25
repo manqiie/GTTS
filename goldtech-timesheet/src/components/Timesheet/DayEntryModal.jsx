@@ -1,4 +1,4 @@
-// DayEntryModal.jsx - Updated for Draft Mode
+// Updated DayEntryModal.jsx - Fixed delete handling
 import React, { useState, useEffect } from 'react';
 import { Modal, message } from 'antd';
 import { EyeOutlined, EditOutlined } from '@ant-design/icons';
@@ -119,11 +119,16 @@ function DayEntryModal({
     resetState();
   };
 
-  // Handle delete - Updated for draft mode
+  // Handle delete - FIXED for draft mode
   const handleDelete = () => {
     if (!readOnly && existingEntry && onSave) {
-      // For draft mode, we pass null to indicate deletion
-      onSave({ date: date, type: 'DELETE' });
+      // For draft mode, call onSave with deletion marker
+      // The parent component will handle this by calling deleteEntry
+      onSave({ 
+        date: date, 
+        type: 'DELETE',
+        isDelete: true // Add a flag to distinguish deletion
+      });
       resetState();
     }
   };

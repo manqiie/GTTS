@@ -1,4 +1,4 @@
-// Complete TimesheetPage.jsx - With Save Draft functionality and Rejection Comments
+// Updated TimesheetPage.jsx - Handle delete operations properly
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Typography, Space, Button, message, Spin, Alert } from 'antd';
 import { SaveOutlined, SendOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -13,7 +13,7 @@ import dayjs from 'dayjs';
 const { Title } = Typography;
 
 /**
- * Complete TimesheetPage with Draft Mode and Rejection Comments Display
+ * Complete TimesheetPage with Draft Mode and Fixed Delete Functionality
  */
 function TimesheetPage() {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ function TimesheetPage() {
     hasUnsavedChanges,
     saveEntry,
     saveBulkEntries,
-    deleteEntry,
+    deleteEntry, // Fixed delete method
     saveDraft, // New method
     submitTimesheet,
     setDefaultHours: updateDefaultHours,
@@ -134,7 +134,7 @@ function TimesheetPage() {
   };
 
   /**
-   * Handle save entry to draft (no API call)
+   * Handle save entry to draft (no API call) - UPDATED to handle deletions
    */
   const handleSaveEntry = (entryData) => {
     if (viewingMode !== 'editable') {
@@ -143,11 +143,20 @@ function TimesheetPage() {
     }
 
     try {
-      saveEntry(entryData);
-      setModalVisible(false);
-      message.success('Entry saved to draft');
+      // Check if this is a delete operation
+      if (entryData.type === 'DELETE' || entryData.isDelete) {
+        // Call delete function instead of save
+        deleteEntry(entryData.date);
+        setModalVisible(false);
+        message.success('Entry deleted from draft');
+      } else {
+        // Normal save operation
+        saveEntry(entryData);
+        setModalVisible(false);
+        message.success('Entry saved to draft');
+      }
     } catch (error) {
-      console.error('Error saving entry:', error);
+      console.error('Error handling entry:', error);
     }
   };
 
@@ -275,7 +284,6 @@ function TimesheetPage() {
                     color: '#cf1322', 
                     fontSize: '13px', 
                     marginTop:'10px',
-                    
                     display: 'flex',
                     alignItems: 'center'
                   }}>
@@ -283,7 +291,6 @@ function TimesheetPage() {
                   </div>
                 {rejectionComments}
               </div>
-              
             </div>
           }
           type="warning"
@@ -372,6 +379,9 @@ function TimesheetPage() {
               {viewingMode === 'editable' && !canEdit && (
                 <span style={{ marginLeft: 8, color: '#999' }}>• Read Only</span>
               )}
+              {hasUnsavedChanges && (
+                <span style={{ marginLeft: 8, color: '#faad14' }}>• Unsaved Changes</span>
+              )}
             </div>
           </Col>
           <Col>
@@ -387,7 +397,6 @@ function TimesheetPage() {
                   title={hasUnsavedChanges ? 'Save draft changes to database' : 'No unsaved changes'}
                 >
                   Save Draft
-                  {hasUnsavedChanges}
                 </Button>
               )}
               
@@ -468,14 +477,14 @@ function TimesheetPage() {
         )}
       </Card>
 
-      {/* Single Day Entry Modal - Modified for read-only mode */}
+      {/* Single Day Entry Modal - Modified for read-only mode and delete handling */}
       <DayEntryModal
         visible={modalVisible}
         date={selectedDate}
         existingEntry={selectedDate ? entries[selectedDate] : null}
         customHoursList={customHours}
         defaultHours={defaultHours}
-        onSave={viewingMode === 'editable' ? handleSaveEntry : null}
+        onSave={viewingMode === 'editable' ? handleSaveEntry : null} // This now handles both save and delete
         onCancel={() => setModalVisible(false)}
         onAddCustomHours={viewingMode === 'editable' ? addCustomHours : null}
         onRemoveCustomHours={viewingMode === 'editable' ? removeCustomHours : null}

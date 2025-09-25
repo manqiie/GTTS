@@ -219,24 +219,21 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Delete entry from DRAFT (local state only)
+   * Delete entry from DRAFT (local state only) - FIXED
    */
   const deleteEntryFromDraft = (date) => {
     const newDraftEntries = { ...draftEntries };
     
-    // If the entry exists in saved entries, we need to mark it as deleted
-    if (entries[date]) {
-      newDraftEntries[date] = null; // Mark for deletion
-    } else {
-      // If it only exists in draft, just remove it
-      delete newDraftEntries[date];
-    }
+    // Mark entry as deleted in draft
+    newDraftEntries[date] = null;
     
     setDraftEntries(newDraftEntries);
     setHasUnsavedChanges(true);
+    
+    console.log('Entry marked for deletion:', date);
   };
 
-  /**
+    /**
    * Save draft entries to database
    */
   const saveDraft = async () => {
@@ -267,6 +264,7 @@ export function useTimesheetStore(year, month) {
           await apiRequest(`/timesheets/entries/${date}`, {
             method: 'DELETE'
           });
+          console.log('Entry deleted from database:', date);
         } catch (error) {
           console.error(`Error deleting entry for ${date}:`, error);
           // Continue with other operations

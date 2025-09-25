@@ -446,7 +446,7 @@ function TimesheetPage() {
             textAlign: 'center' 
           }}>
             <span style={{ color: '#1890ff', fontSize: '14px' }}>
-              📅 This is a historical view of your timesheet for reference.
+              This is a historical view of your timesheet for reference.
             </span>
           </div>
         )}
@@ -460,7 +460,7 @@ function TimesheetPage() {
             textAlign: 'center' 
           }}>
             <span style={{ color: '#666', fontSize: '14px' }}>
-              🔒 This timesheet is in read-only mode. 
+              This timesheet is in read-only mode. 
               {timesheetStatus === 'submitted' && ' It is currently awaiting approval.'}
               {timesheetStatus === 'approved' && ' It has been approved and finalized.'}
             </span>

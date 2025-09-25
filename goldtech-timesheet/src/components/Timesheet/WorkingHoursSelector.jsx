@@ -1,3 +1,4 @@
+// Updated WorkingHoursSelector.jsx - Fixed placeholder display
 import React, { useState } from 'react';
 import { 
   Select, 
@@ -14,7 +15,7 @@ import { DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 /**
- * WorkingHoursSelector Component - Updated without hour calculation and simplified custom flow
+ * WorkingHoursSelector Component - Updated with proper placeholder handling
  */
 function WorkingHoursSelector({
   customHoursList = [],
@@ -27,35 +28,7 @@ function WorkingHoursSelector({
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customStartTime, setCustomStartTime] = useState(null);
   const [customEndTime, setCustomEndTime] = useState(null);
-  
-  // For manual time input
-  const [startTimeInput, setStartTimeInput] = useState('');
-  const [endTimeInput, setEndTimeInput] = useState('');
-
-  /**
-   * Parse time input like "9:30 PM" or "20:30" to dayjs object
-   */
-  const parseTimeInput = (timeStr) => {
-    if (!timeStr) return null;
-    
-    const cleanInput = timeStr.trim().toLowerCase();
-    
-    // Check if it contains AM/PM
-    if (cleanInput.includes('am') || cleanInput.includes('pm')) {
-      try {
-        return dayjs(cleanInput, ['h:mm A', 'hh:mm A', 'h A', 'hh A']);
-      } catch {
-        return null;
-      }
-    } else {
-      // 24-hour format
-      try {
-        return dayjs(cleanInput, ['H:mm', 'HH:mm']);
-      } catch {
-        return null;
-      }
-    }
-  };
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
 
   /**
    * Calculate duration with support for overnight shifts (PM to AM)
@@ -114,7 +87,7 @@ function WorkingHoursSelector({
   };
 
   /**
-   * Generate hours options with delete functionality for custom hours - WITHOUT hour calculation
+   * Generate hours options with delete functionality for custom hours
    */
   const getHoursOptions = () => {
     const customOptions = customHoursList.map(custom => ({
@@ -182,20 +155,27 @@ function WorkingHoursSelector({
   };
 
   /**
+   * Check if the selectedHoursId is valid (exists in options)
+   */
+  const isValidSelection = (value) => {
+    if (!value) return false;
+    const options = getHoursOptions();
+    return options.some(option => option.value === value);
+  };
+
+  /**
    * Handle hours selection
    */
   const handleHoursSelectionChange = (value) => {
     if (value === 'add-custom') {
       setShowCustomInput(true);
-      setStartTimeInput('');
-      setEndTimeInput('');
+      setCustomStartTime(null);
+      setCustomEndTime(null);
       onHoursChange && onHoursChange(value);
       form && form.setFieldsValue({
         startTime: null,
         endTime: null
       });
-      setCustomStartTime(null);
-      setCustomEndTime(null);
       return;
     }
 
@@ -207,25 +187,6 @@ function WorkingHoursSelector({
         startTime: dayjs(selectedOption.startTime, 'HH:mm'),
         endTime: dayjs(selectedOption.endTime, 'HH:mm')
       });
-    }
-  };
-
-  /**
-   * Handle manual time input changes
-   */
-  const handleTimeInputChange = (field, value) => {
-    if (field === 'start') {
-      setStartTimeInput(value);
-      const parsedTime = parseTimeInput(value);
-      if (parsedTime && parsedTime.isValid()) {
-        setCustomStartTime(parsedTime);
-      }
-    } else {
-      setEndTimeInput(value);
-      const parsedTime = parseTimeInput(value);
-      if (parsedTime && parsedTime.isValid()) {
-        setCustomEndTime(parsedTime);
-      }
     }
   };
 
@@ -244,7 +205,6 @@ function WorkingHoursSelector({
       return { isValid: false, error: 'Invalid time range' };
     }
 
-
     // Minimum 30 minutes
     if (duration.totalMinutes < 30) {
       return { isValid: false, error: 'Working hours must be at least 30 minutes' };
@@ -254,105 +214,113 @@ function WorkingHoursSelector({
   };
 
   /**
-   * Save custom working hours and automatically set form fields - NO BUTTONS NEEDED
+   * AUTO-SAVE custom working hours to database when both times are selected
    */
-  const saveCustomHours = () => {
-    let finalStartTime = customStartTime;
-    let finalEndTime = customEndTime;
-
-    // Parse manual inputs if provided
-    if (startTimeInput) {
-      const parsedStart = parseTimeInput(startTimeInput);
-      if (parsedStart && parsedStart.isValid()) {
-        finalStartTime = parsedStart;
-      } else {
-        message.error('Invalid start time format. Use formats like "9:30 AM" or "21:30"');
-        return false;
-      }
-    }
-
-    if (endTimeInput) {
-      const parsedEnd = parseTimeInput(endTimeInput);
-      if (parsedEnd && parsedEnd.isValid()) {
-        finalEndTime = parsedEnd;
-      } else {
-        message.error('Invalid end time format. Use formats like "5:30 PM" or "17:30"');
-        return false;
-      }
-    }
-
+  const autoSaveCustomHours = async (startTime, endTime) => {
     // Validate the time range
-    const validation = validateCustomHours(finalStartTime, finalEndTime);
+    const validation = validateCustomHours(startTime, endTime);
     if (!validation.isValid) {
-      message.warning(validation.error);
+      console.log('Validation failed:', validation.error);
       return false;
     }
 
-    const startTime = finalStartTime.format('HH:mm');
-    const endTime = finalEndTime.format('HH:mm');
+    const startTimeString = startTime.format('HH:mm');
+    const endTimeString = endTime.format('HH:mm');
     
     // Check for duplicates
     const allOptions = getHoursOptions();
     const isDuplicate = allOptions.some(
-      option => option.startTime === startTime && option.endTime === endTime
+      option => option.startTime === startTimeString && option.endTime === endTimeString
     );
 
     if (isDuplicate) {
-      message.warning('This time combination already exists');
+      console.log('Duplicate time combination detected');
       return false;
     }
 
-    const customId = `custom-${Date.now()}`;
-    const newCustomHours = { id: customId, startTime, endTime };
-    
-    onAddCustomHours && onAddCustomHours(newCustomHours);
-    
-    // Automatically select the new custom hours and set form fields
-    onHoursChange && onHoursChange(customId);
-    form && form.setFieldsValue({
-      startTime: finalStartTime,
-      endTime: finalEndTime
-    });
-    
-    setShowCustomInput(false);
-    setStartTimeInput('');
-    setEndTimeInput('');
-    
-    message.success(`Custom working hours added: ${formatTimeDisplaySimple(startTime, endTime)}`);
-    return true;
-  };
+    if (!onAddCustomHours) {
+      console.error('onAddCustomHours function not provided');
+      return false;
+    }
 
-  // Expose the saveCustomHours function for external use (like from modal buttons)
-  React.useImperativeHandle(React.forwardRef, () => ({
-    saveCustomHours
-  }));
+    setIsAutoSaving(true);
+    
+    try {
+      const newCustomHours = { 
+        startTime: startTimeString, 
+        endTime: endTimeString,
+        name: `Custom ${formatTimeDisplaySimple(startTimeString, endTimeString)}`
+      };
+      
+      // Save to database via parent component
+      const savedHours = await onAddCustomHours(newCustomHours);
+      
+      if (savedHours) {
+        // Automatically select the new custom hours and set form fields
+        onHoursChange && onHoursChange(savedHours.id);
+        form && form.setFieldsValue({
+          startTime: startTime,
+          endTime: endTime
+        });
+        
+        setShowCustomInput(false);
+        
+        message.success(`Custom working hours saved: ${formatTimeDisplaySimple(startTimeString, endTimeString)}`);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error auto-saving custom hours:', error);
+      message.error('Failed to save custom hours: ' + error.message);
+      return false;
+    } finally {
+      setIsAutoSaving(false);
+    }
+  };
 
   // Auto-save when both times are selected via TimePicker
   React.useEffect(() => {
-    if (customStartTime && customEndTime && showCustomInput) {
-      // Auto-validate and set form fields without saving to database yet
-      const validation = validateCustomHours(customStartTime, customEndTime);
-      if (validation.isValid && form) {
-        form.setFieldsValue({
-          startTime: customStartTime,
-          endTime: customEndTime
-        });
-      }
+    if (customStartTime && customEndTime && showCustomInput && !isAutoSaving) {
+      // Add a small delay to prevent rapid API calls
+      const saveTimeout = setTimeout(() => {
+        autoSaveCustomHours(customStartTime, customEndTime);
+      }, 500);
+
+      return () => clearTimeout(saveTimeout);
     }
-  }, [customStartTime, customEndTime, showCustomInput, form]);
+  }, [customStartTime, customEndTime, showCustomInput, isAutoSaving]);
+
+  // Get the display value for the Select component
+  const getSelectValue = () => {
+    // If selectedHoursId is valid, return it
+    if (isValidSelection(selectedHoursId)) {
+      return selectedHoursId;
+    }
+    
+    // If showing custom input, show 'add-custom'
+    if (showCustomInput) {
+      return 'add-custom';
+    }
+    
+    // Otherwise return undefined to show placeholder
+    return undefined;
+  };
 
   return (
     <>
       <Select
-        value={selectedHoursId}
+        value={getSelectValue()}
         onChange={handleHoursSelectionChange}
-        placeholder="Select working hours"
+        placeholder="Select Working Hours"
         options={getHoursOptions()}
         optionRender={(option) => option.data.label}
         dropdownStyle={{ minWidth: 350 }}
+        loading={isAutoSaving}
+        allowClear
       />
 
-      {/* Simplified Custom Hours Input - NO ACTION BUTTONS */}
+      {/* Custom Hours Input */}
       {showCustomInput && (
         <div style={{ marginTop: 16 }}>
           {/* Time Picker Row with 5-minute intervals */}
@@ -367,6 +335,7 @@ function WorkingHoursSelector({
                 style={{ width: '100%' }}
                 minuteStep={5}
                 showNow={false}
+                disabled={isAutoSaving}
               />
             </Col>
             <Col span={11}>
@@ -379,6 +348,7 @@ function WorkingHoursSelector({
                 style={{ width: '100%' }}
                 minuteStep={5}
                 showNow={false}
+                disabled={isAutoSaving}
               />
             </Col>
             <Col span={2}>
@@ -388,6 +358,8 @@ function WorkingHoursSelector({
                 icon={<CloseOutlined />}
                 onClick={() => {
                   setShowCustomInput(false);
+                  setCustomStartTime(null);
+                  setCustomEndTime(null);
                   onHoursChange && onHoursChange(null);
                   form && form.setFieldsValue({
                     startTime: null,
@@ -395,6 +367,7 @@ function WorkingHoursSelector({
                   });
                 }}
                 style={{ color: '#999' }}
+                disabled={isAutoSaving}
               />
             </Col>
           </Row>
@@ -402,11 +375,11 @@ function WorkingHoursSelector({
           {/* Helper text */}
           <div style={{ 
             fontSize: '12px', 
-            color: '#666', 
+            color: isAutoSaving ? '#1890ff' : '#666', 
             marginTop: '8px',
             textAlign: 'center'
           }}>
-            Select your custom working hours, then click "Add Entry" to save
+            {isAutoSaving ? 'Saving custom hours...' : 'Custom hours will be saved automatically when both times are selected'}
           </div>
         </div>
       )}

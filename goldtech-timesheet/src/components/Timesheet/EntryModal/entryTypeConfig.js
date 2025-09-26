@@ -8,20 +8,21 @@ export const entryTypeConfig = {
     { value: 'medical_leave', label: 'Medical Leave' },
     { value: 'off_in_lieu', label: 'Off in Lieu' },
     { value: 'day_off', label: 'Public Holiday' },
+    { value: 'nopay_leave', label: 'No Pay Leave' },
     { value: 'others', label: 'Others' }
   ],
 
   othersEntryTypeOptions: [
     { value: 'childcare_leave', label: 'Childcare Leave' },
     { value: 'childcare_leave_halfday', label: 'Childcare Leave (Half Day)' },
-    { value: 'shared_parental_leave', label: 'Shared Parental Leave' },
-    { value: 'nopay_leave', label: 'No Pay Leave' },
     { value: 'nopay_leave_halfday', label: 'No Pay Leave (Half Day)' },
     { value: 'hospitalization_leave', label: 'Hospitalization Leave' },
     { value: 'reservist', label: 'Reservist' },
-    { value: 'paternity_leave', label: 'Paternity Leave' },
     { value: 'compassionate_leave', label: 'Compassionate Leave' },
-    { value: 'maternity_leave', label: 'Maternity Leave' }
+    { value: 'maternity_leave', label: 'Maternity Leave' },
+    { value: 'paternity_leave', label: 'Paternity Leave' },
+    { value: 'shared_parental_leave', label: 'Shared Parental Leave' },
+    { value: 'no_entry', label: 'N/A'}
   ],
 
   // Entry types that require documents

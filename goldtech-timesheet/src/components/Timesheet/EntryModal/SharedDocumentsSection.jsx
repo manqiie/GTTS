@@ -54,7 +54,9 @@ function SharedDocumentsSection({
   return (
     <Form.Item 
       label="Supporting Documents"
-      extra={isBulkMode ? "Upload documents for the primary day. Other selected days will reference these documents." : undefined}
+      name="supportingDocuments"   // <-- Required for validation to work
+      rules={[{ required: true, message: 'Please upload supporting documents' }]}
+      extra={isBulkMode ? "All selected days will reference these documents." : undefined}
     >
       <SupportingDocuments
         fileList={fileList}

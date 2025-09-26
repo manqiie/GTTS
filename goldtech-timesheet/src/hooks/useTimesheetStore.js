@@ -541,7 +541,7 @@ export function useTimesheetStore(year, month) {
    */
   const getSubmitButtonText = () => {
     if (canResubmit) {
-      return 'Submit for Approval';
+      return 'Resubmit for Approval';
     }
     return 'Submit for Approval';
   };

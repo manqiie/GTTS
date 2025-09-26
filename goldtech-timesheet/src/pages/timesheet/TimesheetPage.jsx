@@ -195,6 +195,7 @@ function TimesheetPage() {
   const handleSubmitForApproval = async () => {
     try {
       await submitTimesheet();
+      message.success('Timesheet submitted successfully!');
       
       // Refresh available months after submission
       await loadAvailableMonths();

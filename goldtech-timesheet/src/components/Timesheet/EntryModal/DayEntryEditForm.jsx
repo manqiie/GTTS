@@ -3,15 +3,15 @@ import React, { useEffect } from 'react';
 import { Form, Select, Input, DatePicker, Radio, Button, Popconfirm } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import WorkingHoursSelector from '../WorkingHoursSelector';
 import OffInLieuSelector from '../OffInLieuSelector';
-import SupportingDocuments from '../SupportingDocuments';
 import { entryTypeConfig } from './entryTypeConfig';
+import SharedDocumentsSection from './SharedDocumentsSection';
+import SharedWorkingHoursSection from './SharedWorkingHoursSection';
 
 const { TextArea } = Input;
 
 function DayEntryEditForm({
-  date,
+  date,    
   existingEntry,
   customHoursList,
   defaultHours,
@@ -99,10 +99,6 @@ function DayEntryEditForm({
     form.setFieldValue('halfDayPeriod', undefined);
   };
 
-  // Handle supporting documents change
-  const handleDocumentsChange = (newFileList) => {
-    setFileList(newFileList);
-  };
 
   // Handle form submission
   const handleFormSubmit = () => {
@@ -147,13 +143,14 @@ function DayEntryEditForm({
 
         {/* Working Hours Selection */}
         {entryType === 'working_hours' && (
-          <WorkingHoursSection
+          <SharedWorkingHoursSection
             customHoursList={customHoursList}
             selectedHoursId={selectedHoursId}
             setSelectedHoursId={setSelectedHoursId}
             onAddCustomHours={onAddCustomHours}
             onRemoveCustomHours={onRemoveCustomHours}
             form={form}
+            defaultHours={defaultHours}
           />
         )}
 
@@ -168,10 +165,11 @@ function DayEntryEditForm({
 
         {/* Supporting Documents */}
         {entryType && entryTypeConfig.requiresDocuments(entryType) && (
-          <DocumentsSection
+          <SharedDocumentsSection
             entryType={entryType}
             fileList={fileList}
-            onDocumentsChange={handleDocumentsChange}
+            setFileList={setFileList}
+            isBulkMode={false}
           />
         )}
 
@@ -273,37 +271,6 @@ const HalfDayPeriodSelector = () => (
   </Form.Item>
 );
 
-// Working Hours Section Component
-const WorkingHoursSection = ({
-  customHoursList,
-  selectedHoursId,
-  setSelectedHoursId,
-  onAddCustomHours,
-  onRemoveCustomHours,
-  form
-}) => (
-  <>
-    <Form.Item label="Working Hours Preset">
-      <WorkingHoursSelector
-        customHoursList={customHoursList}
-        selectedHoursId={selectedHoursId}
-        onHoursChange={setSelectedHoursId}
-        onAddCustomHours={onAddCustomHours}
-        onRemoveCustomHours={onRemoveCustomHours}
-        form={form}
-      />
-    </Form.Item>
-
-    {/* Hidden form fields for start/end time */}
-    <Form.Item name="startTime" hidden>
-      <input type="hidden" />
-    </Form.Item>
-    <Form.Item name="endTime" hidden>
-      <input type="hidden" />
-    </Form.Item>
-  </>
-);
-
 // Off in Lieu Section Component
 const OffInLieuSection = ({ dateEarned, setDateEarned, form }) => (
   <>
@@ -323,18 +290,6 @@ const OffInLieuSection = ({ dateEarned, setDateEarned, form }) => (
       <input type="hidden" />
     </Form.Item>
   </>
-);
-
-// Documents Section Component
-const DocumentsSection = ({ entryType, fileList, onDocumentsChange }) => (
-  <Form.Item label="Supporting Documents">
-    <SupportingDocuments
-      fileList={fileList}
-      onChange={onDocumentsChange}
-      required={true}
-      helpText={`Upload supporting documents for ${entryType.replace(/_/g, ' ')} (PDF, JPG, PNG, DOC - Max 5MB each)`}
-    />
-  </Form.Item>
 );
 
 export default DayEntryEditForm;

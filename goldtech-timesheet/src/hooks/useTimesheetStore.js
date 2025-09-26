@@ -1,11 +1,11 @@
-// src/hooks/useTimesheetStore.js - Updated with draft mode functionality
+// Updated useTimesheetStore.js - Remove working days completion validation
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
 /**
- * Updated useTimesheetStore Hook with Draft Mode
+ * Updated useTimesheetStore Hook - Simplified validation
  */
 export function useTimesheetStore(year, month) {
   const [entries, setEntries] = useState({});
@@ -63,10 +63,23 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Get merged entries (draft + saved)
+   * Get merged entries (draft + saved) - UPDATED to filter null entries
    */
   const getMergedEntries = () => {
-    return { ...entries, ...draftEntries };
+    const merged = { ...entries };
+    
+    // Apply draft entries, filtering out null entries (deleted entries)
+    Object.entries(draftEntries).forEach(([date, entryData]) => {
+      if (entryData === null) {
+        // Entry was deleted in draft, remove from merged view
+        delete merged[date];
+      } else {
+        // Entry was added/updated in draft
+        merged[date] = entryData;
+      }
+    });
+    
+    return merged;
   };
 
   /**
@@ -219,12 +232,12 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Delete entry from DRAFT (local state only) - FIXED
+   * Delete entry from DRAFT (local state only) - UPDATED for direct deletion
    */
   const deleteEntryFromDraft = (date) => {
     const newDraftEntries = { ...draftEntries };
     
-    // Mark entry as deleted in draft
+    // Mark entry as deleted in draft (null = deleted)
     newDraftEntries[date] = null;
     
     setDraftEntries(newDraftEntries);
@@ -233,7 +246,7 @@ export function useTimesheetStore(year, month) {
     console.log('Entry marked for deletion:', date);
   };
 
-    /**
+  /**
    * Save draft entries to database
    */
   const saveDraft = async () => {
@@ -301,24 +314,15 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Validate timesheet completeness for submission
+   * SIMPLIFIED validation for submission - No working days requirement
    */
   const validateTimesheetForSubmission = () => {
     const mergedEntries = getMergedEntries();
     const entryDates = Object.keys(mergedEntries).filter(date => mergedEntries[date] !== null);
     
-    // Get working days in month (excluding weekends)
-    const workingDays = getWorkingDaysInMonth(year, month);
-    const completedWorkingDays = entryDates.filter(date => {
-      const dayOfWeek = new Date(date).getDay();
-      return dayOfWeek !== 0 && dayOfWeek !== 6; // Not Sunday or Saturday
-    });
-
-    // Check if at least 80% of working days are completed
-    const completionRate = completedWorkingDays.length / workingDays.length;
-    
-    if (completionRate < 0.8) {
-      throw new Error(`Please complete at least 80% of working days before submitting. You have completed ${completedWorkingDays.length} out of ${workingDays.length} working days.`);
+    // Simple validation: Just check that there's at least one entry
+    if (entryDates.length === 0) {
+      throw new Error('Please add at least one timesheet entry before submitting.');
     }
 
     // Check for any entries with missing required data
@@ -356,7 +360,7 @@ export function useTimesheetStore(year, month) {
   const submitTimesheet = async () => {
     setLoading(true);
     try {
-      // First validate completeness
+      // First validate completeness (simplified)
       validateTimesheetForSubmission();
 
       // Save any unsaved changes first
@@ -578,24 +582,6 @@ export function useTimesheetStore(year, month) {
     loadAvailableMonths,
     checkSubmissionEligibility
   };
-}
-
-/**
- * Utility function to get working days in a month
- */
-function getWorkingDaysInMonth(year, month) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0);
-  const workingDays = [];
-
-  for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
-    const dayOfWeek = date.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday or Saturday
-      workingDays.push(new Date(date).toISOString().split('T')[0]);
-    }
-  }
-
-  return workingDays;
 }
 
 /**

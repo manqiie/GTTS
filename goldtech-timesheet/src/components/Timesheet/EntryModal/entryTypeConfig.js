@@ -1,6 +1,6 @@
-// Updated entryTypeConfig.js - Add N/A entry type and better delete handling
+// Updated entryTypeConfig.js - Remove no_entry type completely
 export const entryTypeConfig = {
-  // Entry type options (no_entry is hidden from user selection)
+  // Entry type options (no_entry completely removed)
   mainEntryTypeOptions: [
     { value: 'working_hours', label: 'Working Hours' },
     { value: 'annual_leave', label: 'Annual Leave' },
@@ -50,23 +50,14 @@ export const entryTypeConfig = {
     return this.halfDayTypes.includes(type);
   },
 
-  // Check if entry is deleted/empty
-  isDeletedEntry(type) {
-    return type === 'no_entry';
-  },
-
   // Get friendly display name for entry type
   getEntryTypeDisplayName(type) {
-    if (type === 'no_entry') {
-      return 'N/A';
-    }
-    
     const allOptions = [...this.mainEntryTypeOptions, ...this.othersEntryTypeOptions];
     const option = allOptions.find(opt => opt.value === type);
     return option ? option.label : type.replace(/_/g, ' ').toUpperCase();
   },
 
-  // Get entry type color for tags
+  // Get entry type color for tags (no_entry removed)
   getEntryTypeColor(type) {
     const colorMap = {
       'working_hours': 'blue',
@@ -84,8 +75,7 @@ export const entryTypeConfig = {
       'paternity_leave': 'blue',
       'compassionate_leave': 'magenta',
       'maternity_leave': 'pink',
-      'day_off': 'gold',
-      'no_entry': 'default' // Gray color for deleted entries
+      'day_off': 'gold'
     };
     return colorMap[type] || 'default';
   }

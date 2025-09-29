@@ -8,13 +8,21 @@ import { CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 /**
- * OffInLieuSelector Component - Fixed for bulk mode
+ * OffInLieuSelector Component
+ * Restricts date selection to dates BEFORE the Off in Lieu date
+ * 
+ * @param {string} value - Selected date earned in YYYY-MM-DD format
+ * @param {function} onChange - Callback when date changes
+ * @param {object} form - Ant Design form instance (optional for bulk mode)
+ * @param {boolean} disabled - Whether the selector is disabled
+ * @param {string} selectedDate - The Off in Lieu date (YYYY-MM-DD) - dates must be BEFORE this
  */
 function OffInLieuSelector({ 
   value, 
   onChange, 
-  form = null, // Made optional for bulk mode
-  disabled = false 
+  form = null,
+  disabled = false,
+  selectedDate = null // The Off in Lieu date being claimed
 }) {
   const [inputValue, setInputValue] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -32,7 +40,7 @@ function OffInLieuSelector({
   }, [value]);
 
   /**
-   * Handle input change and validation
+   * Handle input change
    */
   const handleInputChange = (e) => {
     const inputVal = e.target.value;
@@ -56,15 +64,24 @@ function OffInLieuSelector({
         message.error('Date cannot be in the future.');
         return;
       }
+
+      // Check if date is on or after the Off in Lieu date
+      if (selectedDate) {
+        const oilDate = dayjs(selectedDate);
+        if (parsedDate.isSameOrAfter(oilDate, 'day')) {
+          message.error(`Date earned must be before ${oilDate.format('DD/MM/YYYY')}`);
+          return;
+        }
+      }
       
       const formattedDate = parsedDate.format('YYYY-MM-DD');
       
-      // Update form field only if form is provided (for single day mode)
+      // Update form field if provided
       if (form) {
         form.setFieldValue('dateEarned', formattedDate);
       }
       
-      // Always call parent onChange
+      // Call parent onChange
       if (onChange) {
         onChange(formattedDate);
       }
@@ -90,12 +107,12 @@ function OffInLieuSelector({
       setInputValue(formattedInput);
       setShowDatePicker(false);
       
-      // Update form field only if form is provided
+      // Update form field if provided
       if (form) {
         form.setFieldValue('dateEarned', formattedDate);
       }
       
-      // Always call parent onChange
+      // Call parent onChange
       if (onChange) {
         onChange(formattedDate);
       }
@@ -109,6 +126,19 @@ function OffInLieuSelector({
     if (!disabled) {
       setShowDatePicker(!showDatePicker);
     }
+  };
+
+  /**
+   * Get the maximum selectable date
+   * Returns the day BEFORE the Off in Lieu date
+   */
+  const getMaxSelectableDate = () => {
+    if (selectedDate) {
+      // Return one day before the Off in Lieu date
+      return dayjs(selectedDate).subtract(1, 'day').endOf('day');
+    }
+    // If no selectedDate, default to today
+    return dayjs().endOf('day');
   };
 
   return (
@@ -149,8 +179,13 @@ function OffInLieuSelector({
             }}
             format="DD/MM/YYYY"
             disabledDate={(current) => {
-              // Disable future dates
-              return current && current > dayjs().endOf('day');
+              if (!current) return false;
+              
+              const maxDate = getMaxSelectableDate();
+              
+              // Disable if date is after the maximum allowed date
+              // For Sept 3rd Off in Lieu, this disables Sept 3rd and later
+              return current.isAfter(maxDate, 'day');
             }}
             style={{ visibility: 'hidden', position: 'absolute' }}
             getPopupContainer={() => document.body}

@@ -12,6 +12,7 @@ import apiService from '../../services/apiService';
 const { Search } = Input;
 
 function EmployeeManagementPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const {
     employees,
@@ -168,12 +169,12 @@ function EmployeeManagementPage() {
     try {
       const updatedEmployee = toggleEmployeeStatus(id);
       if (updatedEmployee) {
-        message.success(
+        messageApi.success(
           `User ${updatedEmployee.status === 'ACTIVE' ? 'activated' : 'deactivated'} successfully`
         );
       }
     } catch (error) {
-      message.error('Failed to update user status');
+      messageApi.error('Failed to update user status');
     }
   };
 
@@ -212,6 +213,7 @@ function EmployeeManagementPage() {
 
   return (
     <div>
+      {contextHolder}
       <PageHeader
         title="User Management"
         breadcrumbs={breadcrumbs}

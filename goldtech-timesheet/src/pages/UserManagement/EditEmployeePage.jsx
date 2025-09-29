@@ -9,6 +9,7 @@ import EmployeeForm from '../../components/Employee/EmployeeForm';
 import { useEmployeeStore } from '../../hooks/useEmployeeStore';
 
 function EditEmployeePage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -72,7 +73,7 @@ function EditEmployeePage() {
       }
     } catch (error) {
       console.error('Error loading user:', error);
-      message.error('Failed to load user data');
+      messageApi.error('Failed to load user data');
       setNotFound(true);
     } finally {
       setPageLoading(false);
@@ -117,16 +118,16 @@ function EditEmployeePage() {
       console.log('Updated employee returned from API:', updatedEmployee);
       
       if (updatedEmployee) {
-        message.success(`User ${updatedEmployee.full_name} updated successfully!`);
+        messageApi.success(`User ${updatedEmployee.full_name} updated successfully!`);
         
         
         navigate('/employee-management');
       } else {
-        message.error('Failed to update user');
+        messageApi.error('Failed to update user');
       }
     } catch (error) {
       console.error('Error updating user:', error);
-      message.error('Failed to update user. Please try again.');
+      messageApi.error('Failed to update user. Please try again.');
     }
   };
 
@@ -188,6 +189,7 @@ function EditEmployeePage() {
 
   return (
     <div>
+      {contextHolder}
       <PageHeader
         title={`Edit User: ${employee?.full_name}`}
         breadcrumbs={breadcrumbs}

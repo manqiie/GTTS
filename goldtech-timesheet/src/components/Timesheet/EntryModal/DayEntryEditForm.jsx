@@ -160,6 +160,7 @@ function DayEntryEditForm({
             dateEarned={dateEarned}
             setDateEarned={setDateEarned}
             form={form}
+            date={date} // PASS THE DATE PROP HERE
           />
         )}
 
@@ -271,8 +272,8 @@ const HalfDayPeriodSelector = () => (
   </Form.Item>
 );
 
-// Off in Lieu Section Component
-const OffInLieuSection = ({ dateEarned, setDateEarned, form }) => (
+// Off in Lieu Section Component - UPDATED to accept and pass date prop
+const OffInLieuSection = ({ dateEarned, setDateEarned, form, date }) => (
   <>
     <Form.Item 
       label="Date Earned"
@@ -282,6 +283,7 @@ const OffInLieuSection = ({ dateEarned, setDateEarned, form }) => (
         value={dateEarned}
         onChange={setDateEarned}
         form={form}
+        selectedDate={date} // Pass the date prop to OffInLieuSelector
       />
     </Form.Item>
 

@@ -305,6 +305,7 @@ const IndividualDayItem = ({
             <OffInLieuSelector
               value={individualModifications[date]?.dateEarned}
               onChange={(earnedDate) => onIndividualModification(date, 'dateEarned', earnedDate)}
+              selectedDate={date}
             />
           </div>
         </Col>

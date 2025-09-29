@@ -1,8 +1,7 @@
-// src/hooks/useTimesheetHistoryStore.js
+// src/hooks/useTimesheetHistoryStore.js - Refactored
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
-
-const API_BASE_URL = 'http://localhost:8080/api';
+import { timesheetApi } from '../services/timesheetApi';
 
 /**
  * Hook for managing timesheet history data with API integration
@@ -10,49 +9,6 @@ const API_BASE_URL = 'http://localhost:8080/api';
 export function useTimesheetHistoryStore() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // API helper functions
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken');
-  };
-
-  const getHeaders = () => {
-    const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    };
-  };
-
-  const apiRequest = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const config = {
-      headers: getHeaders(),
-      ...options,
-    };
-
-    try {
-      console.log('Making API request to:', url);
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.error('Unauthorized - redirecting to login');
-          localStorage.removeItem('authToken');
-          window.location.href = '/login';
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('API response:', data);
-      return data;
-    } catch (error) {
-      console.error(`API request failed for ${endpoint}:`, error);
-      throw error;
-    }
-  };
 
   // Load data on mount
   useEffect(() => {
@@ -67,7 +23,7 @@ export function useTimesheetHistoryStore() {
     setLoading(true);
     
     try {
-      const response = await apiRequest('/timesheets/history');
+      const response = await timesheetApi.getTimesheetHistory();
       
       if (response.success && response.data) {
         console.log('History loaded successfully:', response.data);
@@ -127,7 +83,7 @@ export function useTimesheetHistoryStore() {
     try {
       console.log('Getting timesheet details:', timesheetId);
       
-      const response = await apiRequest(`/timesheets/${timesheetId}/details`);
+      const response = await timesheetApi.getTimesheetDetails(timesheetId);
       
       if (response.success && response.data) {
         console.log('Timesheet details loaded successfully');

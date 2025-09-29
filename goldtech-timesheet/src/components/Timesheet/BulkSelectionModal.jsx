@@ -90,19 +90,6 @@ function BulkSelectionModal({
     }));
   };
 
-  // Get Off in Lieu completion stats
-  const getOffInLieuCompletionStats = () => {
-    const daysWithEarnedDate = dates.filter(date => 
-      individualModifications[date]?.dateEarned
-    ).length;
-    
-    return {
-      completed: daysWithEarnedDate,
-      total: dates.length,
-      remaining: dates.length - daysWithEarnedDate
-    };
-  };
-
   // Handle form submission - Updated for draft mode (no validation message)
   const handleSubmit = () => {
     form.validateFields()
@@ -154,7 +141,6 @@ function BulkSelectionModal({
     setIndividualModifications({});
   };
 
-  const offInLieuStats = entryType === 'off_in_lieu' ? getOffInLieuCompletionStats() : null;
 
   return (
     <Modal
@@ -219,20 +205,6 @@ function BulkSelectionModal({
           primaryDocumentDay={primaryDocumentDay}
         />
 
-        {/* Off in Lieu Progress Indicator */}
-           {offInLieuStats && (
-          <Alert
-            message={`Off in Lieu Progress: ${offInLieuStats.completed}/${offInLieuStats.total} days configured`}
-            description={
-              offInLieuStats.remaining > 0 
-                ? `Please set earned dates for the remaining ${offInLieuStats.remaining} day(s)`
-                : "All days have earned dates configured"
-            }
-            type={offInLieuStats.remaining === 0 ? "success" : "warning"}
-            showIcon
-            style={{ marginTop: 16 }}
-          />
-        )}
       </Form>
     </Modal>
   );

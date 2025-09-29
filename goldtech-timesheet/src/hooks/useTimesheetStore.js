@@ -1,15 +1,17 @@
-// src/hooks/useTimesheetStore.js - Updated with draft mode functionality
+// src/hooks/useTimesheetStore.js - Refactored
 import { useState, useEffect } from 'react';
 import { message } from 'antd';
-
-const API_BASE_URL = 'http://localhost:8080/api';
+import { timesheetApi } from '../services/timesheetApi';
+import { validateTimesheetForSubmission } from '../utils/timesheetValidation';
+import { calculateHours, isWorkingDay, isLeaveDay } from '../utils/timesheetUtils';
 
 /**
- * Updated useTimesheetStore Hook with Draft Mode
+ * Main Timesheet Store Hook with Draft Mode
  */
 export function useTimesheetStore(year, month) {
+  // State management
   const [entries, setEntries] = useState({});
-  const [draftEntries, setDraftEntries] = useState({}); // Local draft changes
+  const [draftEntries, setDraftEntries] = useState({});
   const [timesheetData, setTimesheetData] = useState(null);
   const [customHours, setCustomHours] = useState([]);
   const [defaultHours, setDefaultHoursState] = useState(null);
@@ -19,48 +21,6 @@ export function useTimesheetStore(year, month) {
   const [canSubmit, setCanSubmit] = useState(false);
   const [canResubmit, setCanResubmit] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // Get auth token from localStorage
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken');
-  };
-
-  // Get headers with auth token
-  const getHeaders = () => {
-    const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    };
-  };
-
-  // Generic API request method
-  const apiRequest = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const config = {
-      headers: getHeaders(),
-      ...options,
-    };
-
-    try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('authToken');
-          window.location.href = '/login';
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`API request failed for ${endpoint}:`, error);
-      throw error;
-    }
-  };
 
   /**
    * Get merged entries (draft + saved)
@@ -74,7 +34,7 @@ export function useTimesheetStore(year, month) {
    */
   const loadAvailableMonths = async () => {
     try {
-      const response = await apiRequest('/timesheets/available-months');
+      const response = await timesheetApi.getAvailableMonths();
       
       if (response.success && response.data) {
         setAvailableMonths(response.data);
@@ -93,7 +53,7 @@ export function useTimesheetStore(year, month) {
    */
   const checkSubmissionEligibility = async (checkYear, checkMonth) => {
     try {
-      const response = await apiRequest(`/timesheets/${checkYear}/${checkMonth}/can-submit`);
+      const response = await timesheetApi.checkSubmissionEligibility(checkYear, checkMonth);
       
       if (response.success && response.data) {
         setCanSubmit(response.data.canSubmit);
@@ -113,41 +73,17 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Load timesheet data from API on mount or when month changes
-   */
-  useEffect(() => {
-    if (year && month) {
-      loadTimesheetData();
-      loadWorkingHoursPresets();
-      checkSubmissionEligibility(year, month);
-      // Clear draft entries when switching months
-      setDraftEntries({});
-      setHasUnsavedChanges(false);
-    }
-  }, [year, month]);
-
-  /**
-   * Load available months on hook initialization
-   */
-  useEffect(() => {
-    loadAvailableMonths();
-  }, []);
-
-  /**
-   * Load timesheet data from API - UPDATED to store full timesheet data
+   * Load timesheet data from API
    */
   const loadTimesheetData = async () => {
     setLoading(true);
     try {
-      const response = await apiRequest(`/timesheets/${year}/${month}`);
+      const response = await timesheetApi.getTimesheet(year, month);
       
       if (response.success && response.data) {
         const timesheetData = response.data;
         
-        // Store full timesheet data including comments
         setTimesheetData(timesheetData);
-        
-        // Set individual pieces of data as before
         setEntries(timesheetData.entries || {});
         setTimesheetStatus(timesheetData.status || 'draft');
       }
@@ -166,12 +102,11 @@ export function useTimesheetStore(year, month) {
    */
   const loadWorkingHoursPresets = async () => {
     try {
-      const response = await apiRequest('/timesheets/working-hours-presets');
+      const response = await timesheetApi.getWorkingHoursPresets();
       
       if (response.success && response.data) {
         setCustomHours(response.data);
         
-        // Set default hours (first default preset or first preset)
         const defaultPreset = response.data.find(preset => preset.isDefault) || response.data[0];
         if (defaultPreset) {
           setDefaultHoursState({
@@ -183,7 +118,6 @@ export function useTimesheetStore(year, month) {
       }
     } catch (error) {
       console.error('Error loading working hours presets:', error);
-      // Set fallback default hours
       setDefaultHoursState({
         id: '9-18',
         startTime: '09:00',
@@ -219,12 +153,10 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Delete entry from DRAFT (local state only) - FIXED
+   * Delete entry from DRAFT (local state only)
    */
   const deleteEntryFromDraft = (date) => {
     const newDraftEntries = { ...draftEntries };
-    
-    // Mark entry as deleted in draft
     newDraftEntries[date] = null;
     
     setDraftEntries(newDraftEntries);
@@ -233,7 +165,7 @@ export function useTimesheetStore(year, month) {
     console.log('Entry marked for deletion:', date);
   };
 
-    /**
+  /**
    * Save draft entries to database
    */
   const saveDraft = async () => {
@@ -247,13 +179,10 @@ export function useTimesheetStore(year, month) {
       const entriesToSave = [];
       const entriesToDelete = [];
 
-      // Process draft entries
       Object.entries(draftEntries).forEach(([date, entryData]) => {
         if (entryData === null) {
-          // Entry marked for deletion
           entriesToDelete.push(date);
         } else {
-          // Entry to save/update
           entriesToSave.push(entryData);
         }
       });
@@ -261,32 +190,24 @@ export function useTimesheetStore(year, month) {
       // Delete entries first
       for (const date of entriesToDelete) {
         try {
-          await apiRequest(`/timesheets/entries/${date}`, {
-            method: 'DELETE'
-          });
+          await timesheetApi.deleteEntry(date);
           console.log('Entry deleted from database:', date);
         } catch (error) {
           console.error(`Error deleting entry for ${date}:`, error);
-          // Continue with other operations
         }
       }
 
       // Save/update entries
       if (entriesToSave.length > 0) {
-        const response = await apiRequest('/timesheets/entries/bulk', {
-          method: 'POST',
-          body: JSON.stringify(entriesToSave)
-        });
+        const response = await timesheetApi.saveBulkEntries(entriesToSave);
 
         if (!response.success) {
           throw new Error(response.message || 'Failed to save entries');
         }
       }
 
-      // Refresh data from server
       await loadTimesheetData();
       
-      // Clear draft entries
       setDraftEntries({});
       setHasUnsavedChanges(false);
       
@@ -301,70 +222,17 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Validate timesheet completeness for submission
-   */
-  const validateTimesheetForSubmission = () => {
-    const mergedEntries = getMergedEntries();
-    const entryDates = Object.keys(mergedEntries).filter(date => mergedEntries[date] !== null);
-    
-    // Get working days in month (excluding weekends)
-    const workingDays = getWorkingDaysInMonth(year, month);
-    const completedWorkingDays = entryDates.filter(date => {
-      const dayOfWeek = new Date(date).getDay();
-      return dayOfWeek !== 0 && dayOfWeek !== 6; // Not Sunday or Saturday
-    });
-
-    // Check if at least 80% of working days are completed
-    const completionRate = completedWorkingDays.length / workingDays.length;
-    
-    if (completionRate < 0.8) {
-      throw new Error(`Please complete at least 80% of working days before submitting. You have completed ${completedWorkingDays.length} out of ${workingDays.length} working days.`);
-    }
-
-    // Check for any entries with missing required data
-    const incompleteEntries = entryDates.filter(date => {
-      const entry = mergedEntries[date];
-      if (!entry) return false;
-
-      // Check working hours completeness
-      if (entry.type === 'working_hours') {
-        return !entry.startTime || !entry.endTime;
-      }
-
-      // Check off in lieu completeness
-      if (entry.type === 'off_in_lieu') {
-        return !entry.dateEarned;
-      }
-
-      // Check half day completeness
-      const halfDayTypes = ['annual_leave_halfday', 'childcare_leave_halfday', 'nopay_leave_halfday'];
-      if (halfDayTypes.includes(entry.type)) {
-        return !entry.halfDayPeriod;
-      }
-
-      return false;
-    });
-
-    if (incompleteEntries.length > 0) {
-      throw new Error(`Please complete all entry details before submitting. Incomplete entries on: ${incompleteEntries.join(', ')}`);
-    }
-  };
-
-  /**
-   * Submit timesheet for approval (with save and validation)
+   * Submit timesheet for approval
    */
   const submitTimesheet = async () => {
     setLoading(true);
     try {
-      // First validate completeness
-      validateTimesheetForSubmission();
+      validateTimesheetForSubmission(getMergedEntries(), year, month);
 
-      // Save any unsaved changes first
       if (hasUnsavedChanges) {
         await saveDraft();
       }
 
-      // Check if submission is allowed
       const eligibility = await checkSubmissionEligibility(year, month);
       
       if (!eligibility.canPerformAction) {
@@ -376,9 +244,7 @@ export function useTimesheetStore(year, month) {
         }
       }
 
-      const response = await apiRequest(`/timesheets/${year}/${month}/submit`, {
-        method: 'POST'
-      });
+      const response = await timesheetApi.submitTimesheet(year, month);
 
       if (response.success && response.data) {
         setTimesheetStatus(response.data.status);
@@ -406,14 +272,7 @@ export function useTimesheetStore(year, month) {
    */
   const addCustomHours = async (newHours) => {
     try {
-      const response = await apiRequest('/timesheets/working-hours-presets', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: newHours.name || 'Custom Hours',
-          startTime: newHours.startTime,
-          endTime: newHours.endTime
-        })
-      });
+      const response = await timesheetApi.addWorkingHoursPreset(newHours);
 
       if (response.success && response.data) {
         const updatedCustomHours = [...customHours, response.data];
@@ -436,9 +295,7 @@ export function useTimesheetStore(year, month) {
    */
   const removeCustomHours = async (hoursId) => {
     try {
-      const response = await apiRequest(`/timesheets/working-hours-presets/${hoursId}`, {
-        method: 'DELETE'
-      });
+      const response = await timesheetApi.removeWorkingHoursPreset(hoursId);
 
       if (response.success) {
         const updatedCustomHours = customHours.filter(h => h.id !== hoursId);
@@ -456,7 +313,7 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Set default working hours (for frontend compatibility)
+   * Set default working hours
    */
   const setDefaultHours = (hours) => {
     setDefaultHoursState(hours);
@@ -473,43 +330,25 @@ export function useTimesheetStore(year, month) {
   };
 
   /**
-   * Get statistics for current month (including draft entries)
+   * Get statistics for current month
    */
   const getMonthStats = async () => {
     try {
       const mergedEntries = getMergedEntries();
       const entryDates = Object.keys(mergedEntries).filter(date => mergedEntries[date] !== null);
       
-      const workingDays = entryDates.filter(date => {
-        const entry = mergedEntries[date];
-        return entry && entry.type === 'working_hours';
-      });
+      const workingDays = entryDates.filter(date => isWorkingDay(mergedEntries[date]));
       
       const totalHours = workingDays.reduce((total, date) => {
         const entry = mergedEntries[date];
-        if (entry && entry.startTime && entry.endTime) {
-          const start = new Date(`2000-01-01T${entry.startTime}:00`);
-          let end = new Date(`2000-01-01T${entry.endTime}:00`);
-          
-          // Handle overnight shifts
-          if (end <= start) {
-            end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
-          }
-          
-          const hours = (end - start) / (1000 * 60 * 60);
-          return total + hours;
-        }
-        return total;
+        return total + calculateHours(entry.startTime, entry.endTime);
       }, 0);
 
       return {
         totalEntries: entryDates.length,
         workingDays: workingDays.length,
         totalHours: totalHours,
-        leaveDays: entryDates.filter(date => {
-          const entry = mergedEntries[date];
-          return entry && !['working_hours', 'day_off'].includes(entry.type);
-        }).length
+        leaveDays: entryDates.filter(date => isLeaveDay(mergedEntries[date])).length
       };
     } catch (error) {
       console.error('Error getting month stats:', error);
@@ -546,8 +385,24 @@ export function useTimesheetStore(year, month) {
     return 'Submit for Approval';
   };
 
+  // Load data on mount or when month changes
+  useEffect(() => {
+    if (year && month) {
+      loadTimesheetData();
+      loadWorkingHoursPresets();
+      checkSubmissionEligibility(year, month);
+      setDraftEntries({});
+      setHasUnsavedChanges(false);
+    }
+  }, [year, month]);
+
+  // Load available months on initialization
+  useEffect(() => {
+    loadAvailableMonths();
+  }, []);
+
   return {
-    entries: getMergedEntries(), // Return merged entries for display
+    entries: getMergedEntries(),
     timesheetData,
     customHours,
     defaultHours,
@@ -561,14 +416,12 @@ export function useTimesheetStore(year, month) {
     submitButtonText: getSubmitButtonText(),
     hasUnsavedChanges,
     
-    // Updated methods for draft mode
     saveEntry: saveEntryToDraft,
     saveBulkEntries: saveBulkEntriesToDraft,
     deleteEntry: deleteEntryFromDraft,
-    saveDraft, // New method
+    saveDraft,
     submitTimesheet,
     
-    // Existing methods
     setDefaultHours,
     addCustomHours,
     removeCustomHours,
@@ -577,106 +430,5 @@ export function useTimesheetStore(year, month) {
     loadTimesheetData,
     loadAvailableMonths,
     checkSubmissionEligibility
-  };
-}
-
-/**
- * Utility function to get working days in a month
- */
-function getWorkingDaysInMonth(year, month) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0);
-  const workingDays = [];
-
-  for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
-    const dayOfWeek = date.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday or Saturday
-      workingDays.push(new Date(date).toISOString().split('T')[0]);
-    }
-  }
-
-  return workingDays;
-}
-
-/**
- * Hook specifically for timesheet history (unchanged)
- */
-export function useTimesheetHistory() {
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // Get auth token from localStorage
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken');
-  };
-
-  // Get headers with auth token
-  const getHeaders = () => {
-    const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    };
-  };
-
-  // Generic API request method
-  const apiRequest = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const config = {
-      headers: getHeaders(),
-      ...options,
-    };
-
-    try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('authToken');
-          window.location.href = '/login';
-          return;
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`API request failed for ${endpoint}:`, error);
-      throw error;
-    }
-  };
-
-  /**
-   * Load timesheet history
-   */
-  const loadHistory = async () => {
-    setLoading(true);
-    try {
-      const response = await apiRequest('/timesheets/history');
-      
-      if (response.success && response.data) {
-        setHistory(response.data);
-      } else {
-        setHistory([]);
-      }
-    } catch (error) {
-      console.error('Error loading timesheet history:', error);
-      message.error('Failed to load timesheet history');
-      setHistory([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load history on mount
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
-  return {
-    history,
-    loading,
-    loadHistory
   };
 }

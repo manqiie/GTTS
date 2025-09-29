@@ -17,7 +17,7 @@ export function validateEntry(entry) {
   // Check off in lieu completeness
   if (entry.type === 'off_in_lieu') {
     if (!entry.dateEarned) {
-      return { valid: false, error: 'Date earned is required for off in lieu' };
+      return { valid: false, error: 'Date earned is required for Off in Lieu entries' };
     }
   }
 
@@ -51,20 +51,22 @@ export function findIncompleteEntries(entries) {
 }
 
 /**
- * Validate timesheet completeness for submission
+ * Validate timesheet completeness for submission - UPDATED to require 100%
  */
 export function validateTimesheetForSubmission(entries, year, month) {
   const filteredEntries = Object.fromEntries(
     Object.entries(entries).filter(([, entry]) => entry !== null)
   );
 
-  // Check completion rate
-  const { completed, total, rate } = calculateCompletionRate(filteredEntries, year, month);
+  // Get all working days in the month
+  const workingDays = getWorkingDaysInMonth(year, month);
+  const { completed, total } = calculateCompletionRate(filteredEntries, year, month);
   
-  if (rate < 0.8) {
+  // CHANGED: Require 100% completion (all working days must have entries)
+  if (completed < total) {
+    const missingDays = total - completed;
     throw new Error(
-      `Please complete at least 80% of working days before submitting. ` +
-      `You have completed ${completed} out of ${total} working days.`
+      `Please fill up all working days before submitting. You have ${missingDays} working day${missingDays > 1 ? 's' : ''} without entries.`
     );
   }
 
@@ -72,9 +74,8 @@ export function validateTimesheetForSubmission(entries, year, month) {
   const incompleteEntries = findIncompleteEntries(filteredEntries);
   
   if (incompleteEntries.length > 0) {
-    const dates = incompleteEntries.map(e => e.date).join(', ');
     throw new Error(
-      `Please complete all entry details before submitting. Incomplete entries on: ${dates}`
+      `Please complete all entry details before submitting. Some entries are missing required information.`
     );
   }
 

@@ -52,7 +52,7 @@ const ApprovalSection = ({
             danger
             icon={<CloseOutlined />}
             loading={submitting}
-            onClick={handleReject}
+            onClick={onReject}
             disabled={submitting}
           >
             Reject

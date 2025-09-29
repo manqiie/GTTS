@@ -200,22 +200,8 @@ function TimesheetPage() {
       await loadAvailableMonths();
     } catch (error) {
       console.error('Error submitting timesheet:', error);
-    }
-  };
-
-  /**
-   * Handle refresh timesheet data
-   */
-  const handleRefresh = async () => {
-    try {
-      await loadTimesheetData();
-      if (viewingMode === 'editable') {
-        await loadAvailableMonths();
-        await checkSubmissionEligibility(selectedYear, selectedMonth);
-      }
-      messageApi.success('Timesheet data refreshed');
-    } catch (error) {
-      console.error('Error refreshing data:', error);
+      // Display the actual error message to the user
+      messageApi.error(error.message || 'Failed to submit timesheet');
     }
   };
 

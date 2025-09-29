@@ -22,6 +22,7 @@ const { Text } = Typography;
 
 function TimesheetReviewPage() {
   const navigate = useNavigate();
+  const [messageApi, contextHolder] = message.useMessage();
   const { timesheetId } = useParams();
   const {
     timesheets,
@@ -105,13 +106,13 @@ function TimesheetReviewPage() {
     // Validate inputs
     if (!decision || (decision !== 'approved' && decision !== 'rejected')) {
       console.error('Invalid decision:', decision);
-      message.error('Invalid approval decision');
+      messageApi.error('Invalid approval decision');
       return;
     }
 
     if (decision === 'rejected' && (!comments || !comments.trim())) {
       console.warn('Comments required for rejection');
-      message.warning('Please provide comments for rejection');
+      messageApi.warning('Please provide comments for rejection');
       return;
     }
 
@@ -127,7 +128,7 @@ function TimesheetReviewPage() {
       const success = await updateTimesheetApproval(timesheetId, decision, comments.trim());
       
       if (success) {
-        message.success(`Timesheet ${decision} successfully`);
+        messageApi.success(`Timesheet ${decision} successfully`);
         sessionStorage.removeItem('currentTimesheet');
         
         // Add a small delay to ensure the message is visible
@@ -139,7 +140,7 @@ function TimesheetReviewPage() {
       }
     } catch (error) {
       console.error(`Error ${decision} timesheet:`, error);
-      message.error(`Failed to ${decision} timesheet: ${error.message}`);
+      messageApi.error(`Failed to ${decision} timesheet: ${error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +152,7 @@ function TimesheetReviewPage() {
       console.log('Attempting to view document:', document);
       
       if (!document.id) {
-        message.error('Invalid document ID');
+        messageApi.error('Invalid document ID');
         return;
       }
 
@@ -191,7 +192,7 @@ function TimesheetReviewPage() {
       
     } catch (error) {
       console.error('Error viewing document:', error);
-      message.error('Failed to view document: ' + error.message);
+      messageApi.error('Failed to view document: ' + error.message);
     }
   };
 
@@ -243,6 +244,8 @@ function TimesheetReviewPage() {
 
   return (
     <div>
+      {/* show antd message */}
+      {contextHolder}  
       <PageHeader
         title={`Review Timesheet - ${timesheet.employeeName}`}
         breadcrumbs={breadcrumbs}

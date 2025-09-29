@@ -66,6 +66,8 @@ function AppContent() {
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/timesheet" element={<TimesheetPage />} />
                   <Route path="/history" element={<TimesheetHistoryPage />} /> {/* New route */}
+
+ 
                   
                   {/* Manager/Admin Routes - Timesheet Approval */}
                   <Route path="/approve" element={

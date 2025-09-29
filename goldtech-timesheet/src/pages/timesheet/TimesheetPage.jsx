@@ -18,6 +18,7 @@ const { Title } = Typography;
 function TimesheetPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [messageApi, contextHolder] = message.useMessage();
   
   // Get year/month from URL params or default to current
   const [selectedYear, setSelectedYear] = useState(
@@ -120,7 +121,7 @@ function TimesheetPage() {
    */
   const handleBulkSelection = (dates) => {
     if (viewingMode !== 'editable' || !canEdit) {
-      message.info('This timesheet is in view-only mode');
+      messageApi.info('This timesheet is in view-only mode');
       return;
     }
 
@@ -138,7 +139,7 @@ function TimesheetPage() {
    */
   const handleSaveEntry = (entryData) => {
     if (viewingMode !== 'editable') {
-      message.warning('This timesheet cannot be edited');
+      messageApi.warning('This timesheet cannot be edited');
       return;
     }
 
@@ -148,12 +149,10 @@ function TimesheetPage() {
         // Call delete function instead of save
         deleteEntry(entryData.date);
         setModalVisible(false);
-        message.success('Entry deleted from draft');
       } else {
         // Normal save operation
         saveEntry(entryData);
         setModalVisible(false);
-        message.success('Entry saved to draft');
       }
     } catch (error) {
       console.error('Error handling entry:', error);
@@ -165,14 +164,13 @@ function TimesheetPage() {
    */
   const handleSaveBulkEntries = (entriesArray) => {
     if (viewingMode !== 'editable') {
-      message.warning('This timesheet cannot be edited');
+      messageApi.warning('This timesheet cannot be edited');
       return;
     }
 
     try {
       saveBulkEntries(entriesArray);
       setBulkModalVisible(false);
-      message.success(`${entriesArray.length} entries saved to draft`);
     } catch (error) {
       console.error('Error saving bulk entries:', error);
     }
@@ -184,6 +182,7 @@ function TimesheetPage() {
   const handleSaveDraft = async () => {
     try {
       await saveDraft();
+      messageApi.success('Draft saved successfully!');
     } catch (error) {
       console.error('Error saving draft:', error);
     }
@@ -195,7 +194,7 @@ function TimesheetPage() {
   const handleSubmitForApproval = async () => {
     try {
       await submitTimesheet();
-      message.success('Timesheet submitted successfully!');
+      messageApi.success('Timesheet submitted successfully!');
       
       // Refresh available months after submission
       await loadAvailableMonths();
@@ -214,7 +213,7 @@ function TimesheetPage() {
         await loadAvailableMonths();
         await checkSubmissionEligibility(selectedYear, selectedMonth);
       }
-      message.success('Timesheet data refreshed');
+      messageApi.success('Timesheet data refreshed');
     } catch (error) {
       console.error('Error refreshing data:', error);
     }
@@ -350,6 +349,8 @@ function TimesheetPage() {
 
   return (
     <div>
+     {/* show antd message */}
+      {contextHolder}  
       {/* Page Header */}
       <TimesheetHeader {...getHeaderProps()} />
 

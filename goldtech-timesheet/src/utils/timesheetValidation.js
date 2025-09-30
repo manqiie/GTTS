@@ -54,24 +54,33 @@ export function findIncompleteEntries(entries) {
  * Validate timesheet completeness for submission - UPDATED to require 100%
  */
 export function validateTimesheetForSubmission(entries, year, month) {
-  const filteredEntries = Object.fromEntries(
-    Object.entries(entries).filter(([, entry]) => entry !== null)
-  );
 
+  const allEntries = entries; // Keep all entries as-is
+  
   // Get all working days in the month
   const workingDays = getWorkingDaysInMonth(year, month);
-  const { completed, total } = calculateCompletionRate(filteredEntries, year, month);
   
-  // CHANGED: Require 100% completion (all working days must have entries)
-  if (completed < total) {
-    const missingDays = total - completed;
+  //  Count ALL entries (including no_entry/N/A)
+  const totalEntries = Object.keys(allEntries).filter(date => allEntries[date] !== null).length;
+  
+  // Require 100% completion (all working days must have entries)
+  if (totalEntries < workingDays.length) {
+    const missingDays = workingDays.length - totalEntries;
     throw new Error(
       `Please fill up all working days before submitting. You have ${missingDays} working day${missingDays > 1 ? 's' : ''} without entries.`
     );
   }
 
-  // Check for incomplete entries
-  const incompleteEntries = findIncompleteEntries(filteredEntries);
+  // Check for incomplete entries (but skip no_entry type)
+  const incompleteEntries = [];
+  Object.entries(allEntries).forEach(([date, entry]) => {
+    if (entry === null || entry.type === 'no_entry') return; // Skip validation for N/A entries
+    
+    const validation = validateEntry(entry);
+    if (!validation.valid) {
+      incompleteEntries.push({ date, error: validation.error });
+    }
+  });
   
   if (incompleteEntries.length > 0) {
     throw new Error(

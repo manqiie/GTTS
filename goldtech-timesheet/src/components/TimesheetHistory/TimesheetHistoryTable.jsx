@@ -13,14 +13,21 @@ function TimesheetHistoryTable({
     {
       title: 'Period',
       key: 'period',
-      width: 120,
+      width: 150,
       sorter: (a, b) => {
         if (a.year !== b.year) return b.year - a.year;
-        return b.month - a.month;
+        if (a.month !== b.month) return b.month - a.month;
+        return b.version - a.version; //  Sort by version 
       },
       render: (_, record) => (
         <div>
-          {record.monthName} {record.year}
+          <div>{record.monthName} {record.year}</div>
+          {/* Display version badge */}
+          {record.version > 1 && (
+            <Tag color="blue" size="small" style={{ marginTop: 4 }}>
+              v{record.version}
+            </Tag>
+          )}
         </div>
       ),
     },
@@ -35,7 +42,7 @@ function TimesheetHistoryTable({
         { text: 'Rejected', value: 'rejected' },
       ],
       onFilter: (value, record) => record.status === value,
-      render: (status) => {
+      render: (status, record) => {
         const statusConfig = {
           submitted: { color: 'orange', text: 'Pending' },
           approved: { color: 'green', text: 'Approved' },
@@ -44,9 +51,12 @@ function TimesheetHistoryTable({
         
         const config = statusConfig[status] || statusConfig.submitted;
         return (
-          <Tag color={config.color}>
-            {config.text}
-          </Tag>
+          <div>
+            <Tag color={config.color}>
+              {config.text}
+            </Tag>
+          
+          </div>
         );
       },
     },
@@ -152,7 +162,7 @@ function TimesheetHistoryTable({
       locale={{ emptyText: null }}
       dataSource={history}
       loading={loading}
-      rowKey="timesheetId"
+      rowKey={(record) => `${record.timesheetId}-${record.version}`} // Unique key with version
       pagination={{
         showSizeChanger: true,
         showQuickJumper: true,

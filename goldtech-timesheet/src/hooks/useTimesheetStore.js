@@ -223,12 +223,15 @@ export function useTimesheetStore(year, month) {
 
   /**
    * Submit timesheet for approval
+   * - First submission: Creates version 1
+   * - Resubmission: Creates new version with all entries copied
    */
   const submitTimesheet = async () => {
     setLoading(true);
     try {
       validateTimesheetForSubmission(getMergedEntries(), year, month);
 
+      // Save draft first if there are unsaved changes
       if (hasUnsavedChanges) {
         await saveDraft();
       }
@@ -238,12 +241,13 @@ export function useTimesheetStore(year, month) {
       if (!eligibility.canPerformAction) {
         const today = new Date();
         if (today.getDate() > 10) {
-          throw new Error('Previous month timesheet can only be submitted within the first 10 days of the current month');
+          throw new Error('Previous month timesheet can only be submitted within the first 10 days');
         } else {
           throw new Error('This timesheet cannot be submitted at this time');
         }
       }
 
+      // Call backend API - versioning is handled automatically
       const response = await timesheetApi.submitTimesheet(year, month);
 
       if (response.success && response.data) {
@@ -253,7 +257,8 @@ export function useTimesheetStore(year, month) {
         setHasUnsavedChanges(false);
         
         const actionWord = eligibility.canResubmit ? 'resubmitted' : 'submitted';
-        message.success(`Timesheet ${actionWord} for approval`);
+        message.success(`Timesheet ${actionWord} for approval (Version ${response.data.version || 1})`);
+        
         return response.data;
       } else {
         throw new Error(response.message || 'Failed to submit timesheet');
@@ -266,7 +271,7 @@ export function useTimesheetStore(year, month) {
       setLoading(false);
     }
   };
-
+  
   /**
    * Add custom working hours preset
    */

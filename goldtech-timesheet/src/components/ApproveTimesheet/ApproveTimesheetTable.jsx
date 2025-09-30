@@ -1,6 +1,7 @@
-// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx - Updated with correct statistics
+// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx - WITH VERSION SUPPORT
 import React from 'react';
-import { Table, Tag, Button } from 'antd';
+import { Table, Tag, Button, Tooltip } from 'antd';
+import { RedoOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 function ApproveTimesheetTable({ 
@@ -26,14 +27,28 @@ function ApproveTimesheetTable({
     {
       title: 'Period',
       key: 'period',
-      width: 120,
+      width: 150,
       sorter: (a, b) => {
         if (a.year !== b.year) return b.year - a.year;
-        return b.month - a.month;
+        if (a.month !== b.month) return b.month - a.month;
+        return (b.version || 1) - (a.version || 1);
       },
       render: (_, record) => (
         <div>
-          {record.monthName} {record.year}
+          <div>{record.monthName} {record.year}</div>
+          {/* Show version badge for resubmissions */}
+          {record.version && record.version > 1 && (
+            <Tooltip title={`This is version ${record.version} - Resubmitted after rejection`}>
+              <Tag 
+                icon={<RedoOutlined />} 
+                color="purple" 
+                size="small" 
+                style={{ marginTop: 4, cursor: 'help' }}
+              >
+                v{record.version} (Resubmitted)
+              </Tag>
+            </Tooltip>
+          )}
         </div>
       ),
     },
@@ -124,7 +139,7 @@ function ApproveTimesheetTable({
       columns={columns}
       dataSource={timesheets}
       loading={loading}
-      rowKey="id"
+      rowKey={(record) => `${record.id}-${record.version || 1}`} //  Unique key with version
       pagination={{
         showSizeChanger: true,
         showQuickJumper: true,

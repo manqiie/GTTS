@@ -1,4 +1,4 @@
-// Fixed ApproveTimesheetPage.jsx - Better ID handling and navigation
+// Fixed ApproveTimesheetPage.jsx - Show all statuses with pending first
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, Select, Button, message } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -22,7 +22,7 @@ function ApproveTimesheetPage() {
   const [filteredTimesheets, setFilteredTimesheets] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
-    status: 'pending',
+    status: 'all', // Changed from 'pending' to 'all'
     month: 'all',
     year: 'all',
   });

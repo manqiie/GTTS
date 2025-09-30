@@ -1,4 +1,4 @@
-// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx - WITH VERSION SUPPORT
+// src/components/ApproveTimesheet/ApproveTimesheetTable.jsx - WITHOUT GREY BACKGROUND
 import React from 'react';
 import { Table, Tag, Button, Tooltip } from 'antd';
 import { RedoOutlined } from '@ant-design/icons';
@@ -9,6 +9,19 @@ function ApproveTimesheetTable({
   loading, 
   onView 
 }) {
+  // Sort timesheets before rendering: pending first, then by submission time (newest first)
+  const sortedTimesheets = [...timesheets].sort((a, b) => {
+    // First, prioritize pending status at the top
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (a.status !== 'pending' && b.status === 'pending') return 1;
+    
+    // For all records, sort by submission time (newest first)
+    if (!a.submittedAt && !b.submittedAt) return 0;
+    if (!a.submittedAt) return 1;
+    if (!b.submittedAt) return -1;
+    return dayjs(b.submittedAt).unix() - dayjs(a.submittedAt).unix();
+  });
+
   const columns = [
     {
       title: 'Employee',
@@ -104,11 +117,17 @@ function ApproveTimesheetTable({
       key: 'submitted',
       width: 130,
       sorter: (a, b) => {
+        // First, prioritize pending status at the top
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        
+        // For all records, sort by submission time (newest first)
         if (!a.submittedAt && !b.submittedAt) return 0;
         if (!a.submittedAt) return 1;
         if (!b.submittedAt) return -1;
         return dayjs(b.submittedAt).unix() - dayjs(a.submittedAt).unix();
       },
+      // Removed defaultSortOrder to eliminate grey background
       render: (_, record) => {
         if (!record.submittedAt) return <span style={{ color: '#999' }}>-</span>;
         return (
@@ -137,16 +156,16 @@ function ApproveTimesheetTable({
   return (
     <Table
       columns={columns}
-      dataSource={timesheets}
+      dataSource={sortedTimesheets}
       loading={loading}
-      rowKey={(record) => `${record.id}-${record.version || 1}`} //  Unique key with version
+      rowKey={(record) => `${record.id}-${record.version || 1}`}
       pagination={{
         showSizeChanger: true,
         showQuickJumper: true,
         showTotal: (total, range) => 
           `${range[0]}-${range[1]} of ${total} timesheets`,
         pageSizeOptions: ['10', '20', '50', '100'],
-        defaultPageSize: 20,
+        defaultPageSize: 10,
       }}
       scroll={{ x: 800 }}
       rowClassName={(record) => {

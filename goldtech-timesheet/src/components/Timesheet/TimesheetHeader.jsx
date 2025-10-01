@@ -69,36 +69,6 @@ function TimesheetHeader({
 
  
 
-  // Show submission rules info
-  const getSubmissionInfo = () => {
-    const today = dayjs();
-    const isFirstTenDays = today.date() <= 10;
-    const currentMonth = dayjs().format('MMMM YYYY');
-    const previousMonth = dayjs().subtract(1, 'month').format('MMMM YYYY');
-
-    if (isFirstTenDays) {
-      return (
-        <Alert
-          message="Submission Window"
-          description={
-            <div>
-              <div>• <strong>{currentMonth}</strong>: Can be submitted anytime</div>
-              <div>• <strong>{previousMonth}</strong>: Can be submitted until {dayjs().format('MMMM')} 10th</div>
-              <div style={{ marginTop: 4, fontSize: '12px', color: '#666' }}>
-                After the 10th, previous month submissions are not allowed.
-              </div>
-            </div>
-          }
-          type="info"
-          icon={<InfoCircleOutlined />}
-          showIcon
-          style={{ marginTop: 12 }}
-        />
-      );
-    }
-    
-    return null;
-  };
 
 
   const availableOptions = getAvailableOptions();
@@ -160,8 +130,7 @@ function TimesheetHeader({
           </Col>
         </Row>
 
-        {/* Submission Rules Information */}
-        {getSubmissionInfo()}
+
       </Card>
 
       

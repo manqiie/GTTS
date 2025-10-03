@@ -143,7 +143,7 @@ export function useApproveTimesheetStore() {
       filteredTimesheets = filteredTimesheets.filter(ts => 
         ts.employeeName.toLowerCase().includes(term) ||
         ts.employeeId.toLowerCase().includes(term) ||
-        ts.projectSite.toLowerCase().includes(term) ||
+        ts.location.toLowerCase().includes(term) ||
         ts.position.toLowerCase().includes(term)
       );
     }
@@ -154,8 +154,8 @@ export function useApproveTimesheetStore() {
     }
 
     // Project Site filter
-    if (filters.projectSite && filters.projectSite !== 'all') {
-      filteredTimesheets = filteredTimesheets.filter(ts => ts.projectSite === filters.projectSite);
+    if (filters.location && filters.location !== 'all') {
+      filteredTimesheets = filteredTimesheets.filter(ts => ts.location === filters.location);
     }
 
     // Month filter
@@ -231,7 +231,7 @@ export function useApproveTimesheetStore() {
       id: apiTimesheet.timesheetId,
       employeeId: apiTimesheet.employeeId,
       employeeName: apiTimesheet.employeeName,
-      projectSite: apiTimesheet.employeeProjectSite || 'Not Set',
+      location: apiTimesheet.employeelocation || 'Not Set',
       position: apiTimesheet.employeePosition || 'Not Set',
       managerName: apiTimesheet.approvedBy || 'Not Assigned',
       year: apiTimesheet.year,

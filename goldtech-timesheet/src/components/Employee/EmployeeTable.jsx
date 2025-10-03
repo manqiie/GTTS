@@ -87,13 +87,13 @@ function EmployeeTable({
       sorter: (a, b) => a.department.localeCompare(b.department),
     },
     {
-      title: 'Project Site',
-      dataIndex: 'project_site',
-      key: 'project_site',
+      title: 'Location',
+      dataIndex: 'location',
+      key: 'location',
       sorter: (a, b) => {
-        const aProject = a.project_site || '';
-        const bProject = b.project_site || '';
-        return aProject.localeCompare(bProject);
+        const aLocation = a.location || '';
+        const bLocation = b.location || '';
+        return aLocation.localeCompare(bLocation);
       },
       render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
     },

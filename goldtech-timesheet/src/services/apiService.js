@@ -130,9 +130,9 @@ class ApiService {
     return this.get('/users/supervisors');
   }
 
-  // Get supervisors by project site
-  async getSupervisorsByProjectSite(projectSite) {
-    return this.get('/users/supervisors', { projectSite });
+  // Get supervisors by location
+  async getSupervisorsByLocation(location) {
+    return this.get('/users/supervisors', { location });
   }
 
   // Get roles for dropdown
@@ -157,9 +157,9 @@ class ApiService {
 
   // Hierarchical filtering methods
 
-  // Get all project sites
-  async getProjectSites() {
-    return this.get('/users/filter-options/project-sites');
+  // Get all locations
+  async getLocations() {
+    return this.get('/users/filter-options/locations');
   }
 
   // Get all departments
@@ -167,9 +167,9 @@ class ApiService {
     return this.get('/users/filter-options/departments');
   }
 
-  // Get departments by project site
-  async getDepartmentsByProjectSite(projectSite) {
-    return this.get('/users/filter-options/departments', { projectSite });
+  // Get departments by location
+  async getDepartmentsByLocation(location) {
+    return this.get('/users/filter-options/departments', { location });
   }
 
   // Get all positions
@@ -177,23 +177,23 @@ class ApiService {
     return this.get('/users/filter-options/positions');
   }
 
-  // Get positions by project site and department
-  async getPositionsByFilters(projectSite = null, department = null) {
+  // Get positions by location and department
+  async getPositionsByFilters(location = null, department = null) {
     const params = {};
-    if (projectSite) params.projectSite = projectSite;
+    if (location) params.location = location;
     if (department) params.department = department;
     return this.get('/users/filter-options/positions', params);
   }
 
-  // Get roles by project site
-  async getRolesByProjectSite(projectSite) {
-    return this.get('/users/filter-options/roles', { projectSite });
+  // Get roles by location
+  async getRolesByLocation(location) {
+    return this.get('/users/filter-options/roles', { location });
   }
 
-  // Get roles by project site and department
-  async getRolesByFilters(projectSite = null, department = null) {
+  // Get roles by location and department
+  async getRolesByFilters(location = null, department = null) {
     const params = {};
-    if (projectSite) params.projectSite = projectSite;
+    if (location) params.location = location;
     if (department) params.department = department;
     return this.get('/users/filter-options/roles', params);
   }
@@ -208,7 +208,7 @@ transformUserData(backendUser) {
     phone: backendUser.phone,
     position: backendUser.position,
     department: backendUser.department,
-    project_site: backendUser.projectSite,
+    location: backendUser.location,
     join_date: backendUser.joinDate,
     
     // CLEAN: Only supervisor fields - no manager fields
@@ -232,7 +232,7 @@ transformToBackendFormat(frontendUser) {
     phone: frontendUser.phone || null,
     position: frontendUser.position,
     department: frontendUser.department,
-    projectSite: frontendUser.project_site || null,
+    location: frontendUser.location || null,
     joinDate: frontendUser.join_date,
     
     // CLEAN: Only supervisor field

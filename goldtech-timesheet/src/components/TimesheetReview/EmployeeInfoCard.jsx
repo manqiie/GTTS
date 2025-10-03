@@ -22,7 +22,7 @@ const EmployeeInfoCard = ({ timesheet }) => {
             <Descriptions.Item label="Employee">{timesheet.employeeName}</Descriptions.Item>
             <Descriptions.Item label="Employee ID">{timesheet.employeeId || 'N/A'}</Descriptions.Item>
             <Descriptions.Item label="Position">{timesheet.position || 'N/A'}</Descriptions.Item>
-            <Descriptions.Item label="Project Site">{timesheet.projectSite || 'N/A'}</Descriptions.Item>
+            <Descriptions.Item label="Location">{timesheet.location || 'N/A'}</Descriptions.Item>
           </Descriptions>
         </Col>
         <Col span={12}>

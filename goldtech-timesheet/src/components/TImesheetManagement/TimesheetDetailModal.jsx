@@ -137,8 +137,8 @@ function TimesheetDetailModal({
           <Descriptions.Item label="Position" span={1}>
             {timesheet.position}
           </Descriptions.Item>
-          <Descriptions.Item label="Project Site" span={1}>
-            {timesheet.projectSite}
+          <Descriptions.Item label="Location" span={1}>
+            {timesheet.locationSite}
           </Descriptions.Item>
           <Descriptions.Item label="Manager" span={2}>
             {timesheet.managerName}

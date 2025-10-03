@@ -28,13 +28,13 @@ function EmployeeManagementPage() {
     role: 'all',
     position: 'all',
     department: 'all',
-    projectSite: 'all'
+    location: 'all'
   });
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   // Hierarchical filter options
-  const [allProjectSites, setAllProjectSites] = useState([]);
+  const [allLocations, setAllLocations] = useState([]);
   const [filteredDepartments, setFilteredDepartments] = useState([]);
   const [filteredPositions, setFilteredPositions] = useState([]);
   const [filteredRoles, setFilteredRoles] = useState([]);
@@ -53,14 +53,14 @@ function EmployeeManagementPage() {
   // Update dependent filters when higher level filters change
   useEffect(() => {
     updateDependentFilters();
-  }, [filters.projectSite, filters.department, filters.position]);
+  }, [filters.location, filters.department, filters.position]);
 
   const loadFilterOptions = async () => {
     try {
       // Load project sites
-      const projectSitesResponse = await apiService.getProjectSites();
-      if (projectSitesResponse.success) {
-        setAllProjectSites(projectSitesResponse.data || []);
+      const locationsResponse = await apiService.getLocations();
+      if (locationsResponse.success) {
+        setAllLocations(LocationsResponse.data || []);
       }
 
       // Load all departments initially
@@ -72,10 +72,10 @@ function EmployeeManagementPage() {
     }
   };
 
-  const loadDepartments = async (projectSite = null) => {
+  const loadDepartments = async (location = null) => {
     try {
-      const response = projectSite 
-        ? await apiService.getDepartmentsByProjectSite(projectSite)
+      const response = location 
+        ? await apiService.getDepartmentsByLocation(location)
         : await apiService.getAllDepartments();
       
       if (response.success) {
@@ -87,9 +87,9 @@ function EmployeeManagementPage() {
     }
   };
 
-  const loadPositions = async (projectSite = null, department = null) => {
+  const loadPositions = async (location = null, department = null) => {
     try {
-      const response = await apiService.getPositionsByFilters(projectSite, department);
+      const response = await apiService.getPositionsByFilters(location, department);
       if (response.success) {
         setFilteredPositions(response.data || []);
       }
@@ -99,9 +99,9 @@ function EmployeeManagementPage() {
     }
   };
 
-  const loadRoles = async (projectSite = null, department = null) => {
+  const loadRoles = async (location = null, department = null) => {
     try {
-      const response = await apiService.getRolesByFilters(projectSite, department);
+      const response = await apiService.getRolesByFilters(location, department);
       if (response.success) {
         setFilteredRoles(response.data || []);
       }
@@ -112,20 +112,20 @@ function EmployeeManagementPage() {
   };
 
   const updateDependentFilters = async () => {
-    const { projectSite, department } = filters;
+    const { location, department } = filters;
     
     // Update departments based on project site
-    if (projectSite && projectSite !== 'all') {
-      await loadDepartments(projectSite);
+    if (location && location !== 'all') {
+      await loadDepartments(location);
     } else {
       await loadDepartments();
     }
 
     // Update positions based on project site and department
-    const projectSiteFilter = projectSite === 'all' ? null : projectSite;
+    const locationFilter = location === 'all' ? null : location;
     const departmentFilter = department === 'all' ? null : department;
-    await loadPositions(projectSiteFilter, departmentFilter);
-    await loadRoles(projectSiteFilter, departmentFilter);
+    await loadPositions(locationFilter, departmentFilter);
+    await loadRoles(locationFilter, departmentFilter);
   };
 
   const handleSearch = (value) => {
@@ -136,7 +136,7 @@ function EmployeeManagementPage() {
     const newFilters = { ...filters, [key]: value };
     
     // Clear dependent filters when parent filter changes
-    if (key === 'projectSite') {
+    if (key === 'location') {
       newFilters.department = 'all';
       newFilters.position = 'all';
       newFilters.role = 'all';
@@ -155,7 +155,7 @@ function EmployeeManagementPage() {
       role: 'all',
       position: 'all',
       department: 'all',
-      projectSite: 'all'
+      location: 'all'
     });
     loadFilterOptions(); // Reload all options
   };
@@ -183,9 +183,9 @@ function EmployeeManagementPage() {
   };
 
   // Generate filter options
-  const projectSiteOptions = [
-    { label: 'All Project Sites', value: 'all' },
-    ...allProjectSites.map(site => ({ label: site, value: site }))
+  const locationOptions = [
+    { label: 'All Location', value: 'all' },
+    ...allLocations.map(site => ({ label: site, value: site }))
   ];
 
   const departmentOptions = [
@@ -271,10 +271,10 @@ function EmployeeManagementPage() {
           <Col xs={24} sm={12} md={6}>
             <Select
               style={{ width: '100%' }}
-              placeholder="Filter by project site"
-              value={filters.projectSite}
-              onChange={(value) => handleFilterChange('projectSite', value)}
-              options={projectSiteOptions}
+              placeholder="Filter by Location"
+              value={filters.location}
+              onChange={(value) => handleFilterChange('location', value)}
+              options={locationOptions}
               showSearch
               filterOption={(input, option) =>
                 option.label.toLowerCase().includes(input.toLowerCase())

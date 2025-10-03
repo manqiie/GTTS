@@ -378,10 +378,10 @@ function EmployeeForm({
         <Row gutter={24}>
           <Col xs={24} md={12}>
             <Form.Item
-              label="Project Site"
-              name="project_site"
+              label="Location"
+              name="location"
             >
-              <Input placeholder="e.g. Marina Bay Project, Orchard Road Development" />
+              <Input placeholder="e.g. Marina Bay Location, Orchard Road Development" />
             </Form.Item>
           </Col>
           

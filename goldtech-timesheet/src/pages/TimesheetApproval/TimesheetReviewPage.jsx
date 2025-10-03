@@ -249,7 +249,7 @@ function TimesheetReviewPage() {
       <PageHeader
         title={`Review Timesheet - ${timesheet.employeeName}`}
         breadcrumbs={breadcrumbs}
-        description={`${timesheet.monthName} ${timesheet.year} • ${timesheet.projectSite || 'No Project Site'}`}
+        description={`${timesheet.monthName} ${timesheet.year} • ${timesheet.location || 'No Location'}`}
         extra={
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/approve')}>
             Back to List

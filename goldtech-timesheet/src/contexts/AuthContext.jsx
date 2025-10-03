@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }) => {
       phone: backendUser.phone,
       position: backendUser.position,
       department: backendUser.department,
-      projectSite: backendUser.projectSite,
+      location: backendUser.location,
       company: backendUser.company,
       joinDate: backendUser.joinDate,
       supervisorName: backendUser.supervisorName,

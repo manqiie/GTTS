@@ -23,7 +23,7 @@ function CreateEmployeePage() {
         phone: values.phone || null,
         position: values.position,
         department: values.department,
-        project_site: values.project_site || null,
+        location: values.location || null,
         company: values.company || null,
         join_date: values.join_date.format('YYYY-MM-DD'),
         supervisor_id: values.supervisor_id || null,

@@ -263,8 +263,8 @@ function ProfilePage() {
               <Descriptions.Item label="Department">
                 {user.department || 'N/A'}
               </Descriptions.Item>
-              <Descriptions.Item label="Project Site">
-                {user.projectSite || user.project_site || 'Not assigned'}
+              <Descriptions.Item label="Location">
+                {user.location || 'Not assigned'}
               </Descriptions.Item>
               <Descriptions.Item label={<Space><TeamOutlined />Supervisor</Space>}>
                 <Text strong style={{ color: getSupervisorName() === 'Not assigned' ? '#999' : '#262626' }}>

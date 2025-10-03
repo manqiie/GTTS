@@ -54,7 +54,7 @@ function EditEmployeePage() {
           phone: emp.phone,
           position: emp.position,
           department: emp.department,
-          project_site: emp.project_site,
+          location: emp.location,
           company: emp.company,
           join_date: dayjs(emp.join_date),
           
@@ -99,7 +99,7 @@ function EditEmployeePage() {
         phone: values.phone || null,
         position: values.position,
         department: values.department,
-        project_site: values.project_site || null,
+        location: values.location || null,
         company: values.company || null,
         join_date: values.join_date.format('YYYY-MM-DD'),
         

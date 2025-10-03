@@ -54,7 +54,7 @@ export function useEmployeeStore() {
         phone: employeeData.phone || null,
         position: employeeData.position,
         department: employeeData.department,
-        projectSite: employeeData.project_site || null,
+        location: employeeData.location || null,
         company: employeeData.company || null,
         joinDate: employeeData.join_date, // Should already be in YYYY-MM-DD format
         supervisorId: employeeData.supervisor_id || null,
@@ -98,7 +98,7 @@ const updateEmployee = async (id, updates) => {
       phone: updates.phone || null,
       position: updates.position,
       department: updates.department,
-      projectSite: updates.project_site || null,
+      location: updates.location || null,
       company: updates.company || null,
       joinDate: updates.join_date,
       
@@ -233,7 +233,7 @@ const updateEmployee = async (id, updates) => {
         (emp.employee_id && emp.employee_id.toLowerCase().includes(term)) ||
         emp.email.toLowerCase().includes(term) ||
         emp.position.toLowerCase().includes(term) ||
-        (emp.project_site && emp.project_site.toLowerCase().includes(term)) ||
+        (emp.location && emp.location.toLowerCase().includes(term)) ||
         (emp.manager_name && emp.manager_name.toLowerCase().includes(term)) ||
         (emp.department && emp.department.toLowerCase().includes(term)) ||
         (emp.company && emp.company.toLowerCase().includes(term))
@@ -255,7 +255,7 @@ const updateEmployee = async (id, updates) => {
     // Other filters
     Object.keys(filters).forEach(key => {
       if (filters[key] && filters[key] !== 'all' && key !== 'status' && key !== 'role') {
-        const field = key === 'projectSite' ? 'project_site' : key;
+        const field = key === 'location' ? 'location' : key;
         filteredEmployees = filteredEmployees.filter(emp => emp[field] === filters[key]);
       }
     });

@@ -196,7 +196,7 @@ class TimesheetManagementService {
       filteredTimesheets = filteredTimesheets.filter(ts => 
         ts.employeeName.toLowerCase().includes(term) ||
         ts.employeeId.toLowerCase().includes(term) ||
-        ts.projectSite.toLowerCase().includes(term) ||
+        ts.location.toLowerCase().includes(term) ||
         ts.position.toLowerCase().includes(term) ||
         ts.managerName.toLowerCase().includes(term)
       );
@@ -265,7 +265,7 @@ class TimesheetManagementService {
             id: `${employee.id}-${monthKey}`,
             employeeId: employee.employeeId,
             employeeName: employee.name,
-            projectSite: employee.projectSite,
+            location: employee.location,
             position: employee.position,
             managerName: employee.managerName,
             year: year,

@@ -28,11 +28,11 @@ function TimesheetManagementTable({
       ),
     },
     {
-      title: 'Project Site',
-      dataIndex: 'projectSite',
-      key: 'projectSite',
+      title: 'Location',
+      dataIndex: 'location',
+      key: 'location',
       width: 180,
-      sorter: (a, b) => a.projectSite.localeCompare(b.projectSite),
+      sorter: (a, b) => a.location.localeCompare(b.location),
     },
     {
       title: 'Position',

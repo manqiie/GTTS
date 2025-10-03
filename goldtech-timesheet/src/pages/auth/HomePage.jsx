@@ -63,7 +63,7 @@ function HomePage() {
               {user?.position}
             </Text>
             <Text style={{ fontSize: '16px', color: '#999' }}>
-              {user?.department} • {user?.projectSite}
+              {user?.department} • {user?.location}
             </Text>
           </Space>
 

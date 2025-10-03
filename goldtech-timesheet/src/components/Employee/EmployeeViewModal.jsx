@@ -75,8 +75,8 @@ function EmployeeViewModal({ visible, employee, onClose }) {
           {employee.department}
         </Descriptions.Item>
 
-        <Descriptions.Item label="Project Site" span={1}>
-          {employee.project_site || <span style={{ color: '#999' }}>N/A</span>}
+        <Descriptions.Item label="Location" span={1}>
+          {employee.location || <span style={{ color: '#999' }}>N/A</span>}
         </Descriptions.Item>
         <Descriptions.Item label="Company" span={1}>
           {employee.company || <span style={{ color: '#999' }}>N/A</span>}

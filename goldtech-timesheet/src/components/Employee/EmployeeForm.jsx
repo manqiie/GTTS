@@ -1,9 +1,10 @@
-// EmployeeForm.jsx - FINAL FIXED version with working supervisor editing
+// EmployeeForm.jsx - COMPLETE VERSION with LocationDepartmentSelector integration
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import apiService from '../../services/apiService';
+import LocationDepartmentSelector from './LocationDepartmentSelector';
 
 const { Title } = Typography;
 
@@ -32,7 +33,7 @@ function EmployeeForm({
     filterSupervisorOptions(supervisorSearchValue);
   }, [supervisorSearchValue, availableSupervisors]);
 
-  // FIXED: Set initial supervisor search value when editing with better sync
+  // Set initial supervisor search value when editing with better sync
   useEffect(() => {
     console.log('Initial values changed:', initialValues);
     console.log('Available supervisors:', availableSupervisors);
@@ -49,7 +50,7 @@ function EmployeeForm({
           const displayValue = `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`;
           setSupervisorSearchValue(displayValue);
           
-          // CRITICAL: Force update the form field value
+          // Force update the form field value
           setTimeout(() => {
             form.setFieldValue('supervisor_id', supervisor.id);
             console.log('Form field supervisor_id set to:', supervisor.id);
@@ -189,7 +190,6 @@ function EmployeeForm({
       form.setFieldValue('supervisor_id', matchedSupervisor.id);
       console.log('Matched supervisor, set supervisor_id to:', matchedSupervisor.id);
     }
-    // Don't clear the ID for partial matches - user might still be typing
   };
 
   const handleSupervisorClear = () => {
@@ -199,7 +199,7 @@ function EmployeeForm({
     message.info('Supervisor cleared');
   };
 
-  // ADDED: Custom form finish handler to debug values
+  // Custom form finish handler to debug values
   const handleFormFinish = (values) => {
     console.log('Form submitted with values:', values);
     console.log('Supervisor ID in form:', values.supervisor_id);
@@ -229,7 +229,9 @@ function EmployeeForm({
         console.log('Form values changed:', changedValues, allValues);
       }}
     >
-      {/* Basic Information */}
+      {/* ========================================
+          BASIC INFORMATION CARD
+          ======================================== */}
       <Card size="small" style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 16 }}>Basic Information</Title>
         
@@ -285,6 +287,7 @@ function EmployeeForm({
           </Col>
         </Row>
 
+        {/* Password fields - only shown when creating new user */}
         {!initialValues && (
           <Row gutter={24}>
             <Col xs={24} md={12}>
@@ -349,11 +352,24 @@ function EmployeeForm({
         </Row>
       </Card>
 
-      {/* Work Information */}
+      {/* ========================================
+          WORK INFORMATION CARD
+          ======================================== */}
       <Card size="small" style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 16 }}>Work Information</Title>
         
+        {/* NEW: Location and Department Hierarchical Selector */}
+        <LocationDepartmentSelector
+          form={form}
+          initialLocation={initialValues?.location}
+          initialDepartment={initialValues?.department}
+          disabled={disabled}
+          locationRequired={false}
+          departmentRequired={true}
+        />
+
         <Row gutter={24}>
+          {/* Position - Manual Input */}
           <Col xs={24} md={12}>
             <Form.Item
               label="Position"
@@ -364,27 +380,7 @@ function EmployeeForm({
             </Form.Item>
           </Col>
           
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="Department"
-              name="department"
-              rules={[{ required: true, message: 'Please input department!' }]}
-            >
-              <Input placeholder="e.g. Development, Project Management, Quality Assurance" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="Location"
-              name="location"
-            >
-              <Input placeholder="e.g. Marina Bay Location, Orchard Road Development" />
-            </Form.Item>
-          </Col>
-          
+          {/* Join Date */}
           <Col xs={24} md={12}>
             <Form.Item
               label="Join Date"
@@ -398,8 +394,26 @@ function EmployeeForm({
               />
             </Form.Item>
           </Col>
+
+          {/* Status - only shown when editing */}
+          {initialValues && (
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Status"
+                name="status"
+              >
+                <Select
+                  options={[
+                    { label: 'Active', value: 'ACTIVE' },
+                    { label: 'Inactive', value: 'INACTIVE' }
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          )}
         </Row>
 
+        {/* Supervisor Selection */}
         <Row gutter={24}>
           <Col xs={24} md={12}>
             <Form.Item
@@ -425,30 +439,15 @@ function EmployeeForm({
               />
             </Form.Item>
             
-            {/* CRITICAL: Hidden field to store actual supervisor_id */}
+            {/* Hidden field to store actual supervisor_id */}
             <Form.Item name="supervisor_id" hidden>
               <Input />
             </Form.Item>
           </Col>
-
-          {initialValues && (
-            <Col xs={24} md={12}>
-              <Form.Item
-                label="Status"
-                name="status"
-              >
-                <Select
-                  options={[
-                    { label: 'Active', value: 'ACTIVE' },
-                    { label: 'Inactive', value: 'INACTIVE' }
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-          )}
         </Row>
       </Card>
 
+      {/* Submit Button */}
       {submitButton && (
         <Form.Item style={{ marginTop: 24 }}>
           {submitButton}

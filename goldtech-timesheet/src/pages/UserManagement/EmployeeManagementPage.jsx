@@ -60,7 +60,7 @@ function EmployeeManagementPage() {
       // Load project sites
       const locationsResponse = await apiService.getLocations();
       if (locationsResponse.success) {
-        setAllLocations(LocationsResponse.data || []);
+        setAllLocations(locationsResponse.data || []);
       }
 
       // Load all departments initially

@@ -32,16 +32,11 @@ function EmployeeForm({
   }, [supervisorSearchValue, availableSupervisors]);
 
   useEffect(() => {
-    console.log('Initial values changed:', initialValues);
-    console.log('Available supervisors:', availableSupervisors);
-    
     if (initialValues && availableSupervisors.length > 0) {
       const supervisorId = initialValues.supervisor_id;
-      console.log('Looking for supervisor with ID:', supervisorId);
       
       if (supervisorId) {
         const supervisor = availableSupervisors.find(s => s.id === supervisorId);
-        console.log('Found supervisor:', supervisor);
         
         if (supervisor) {
           const displayValue = `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`;
@@ -49,7 +44,6 @@ function EmployeeForm({
           
           setTimeout(() => {
             form.setFieldValue('supervisor_id', supervisor.id);
-            console.log('Form field supervisor_id set to:', supervisor.id);
           }, 100);
         }
       } else {
@@ -64,12 +58,15 @@ function EmployeeForm({
     try {
       const response = await apiService.getRoles();
       if (response.success && response.data) {
-        setAvailableRoles(response.data);
+        // UPDATED: Filter out supervisor role - only show admin and employee
+        const filteredRoles = response.data.filter(role => 
+          role.name === 'admin' || role.name === 'employee'
+        );
+        setAvailableRoles(filteredRoles);
       } else {
         console.error('Failed to load roles:', response.message);
         setAvailableRoles([
           { id: 1, name: 'admin', description: 'Administrator' },
-          { id: 2, name: 'supervisor', description: 'Supervisor' },
           { id: 3, name: 'employee', description: 'Employee' }
         ]);
       }
@@ -77,7 +74,6 @@ function EmployeeForm({
       console.error('Error loading roles:', error);
       setAvailableRoles([
         { id: 1, name: 'admin', description: 'Administrator' },
-        { id: 2, name: 'supervisor', description: 'Supervisor' },
         { id: 3, name: 'employee', description: 'Employee' }
       ]);
     } finally {
@@ -96,7 +92,6 @@ function EmployeeForm({
           employee_id: supervisor.employeeId || supervisor.employee_id
         }));
         setAvailableSupervisors(supervisors);
-        console.log('Loaded supervisors:', supervisors);
       } else {
         console.error('Failed to load supervisors:', response.message);
         setAvailableSupervisors([]);
@@ -151,11 +146,9 @@ function EmployeeForm({
   };
 
   const handleSupervisorSelect = (value, option) => {
-    console.log('Supervisor selected:', value, option);
     if (option && option.supervisorId) {
       form.setFieldValue('supervisor_id', option.supervisorId);
       setSupervisorSearchValue(value);
-      console.log('Set supervisor_id to:', option.supervisorId);
       
       const supervisor = availableSupervisors.find(s => s.id === option.supervisorId);
       if (supervisor) {
@@ -165,12 +158,10 @@ function EmployeeForm({
   };
 
   const handleSupervisorSearch = (value) => {
-    console.log('Supervisor search:', value);
     setSupervisorSearchValue(value);
     
     if (value === '') {
       form.setFieldValue('supervisor_id', null);
-      console.log('Cleared supervisor_id');
       return;
     }
     
@@ -180,28 +171,22 @@ function EmployeeForm({
     
     if (matchedSupervisor) {
       form.setFieldValue('supervisor_id', matchedSupervisor.id);
-      console.log('Matched supervisor, set supervisor_id to:', matchedSupervisor.id);
     }
   };
 
   const handleSupervisorClear = () => {
-    console.log('Supervisor cleared');
     setSupervisorSearchValue('');
     form.setFieldValue('supervisor_id', null);
     message.info('Supervisor cleared');
   };
 
   const handleFormFinish = (values) => {
-    console.log('Form submitted with values:', values);
-    console.log('Supervisor ID in form:', values.supervisor_id);
-    
     if (!values.supervisor_id && supervisorSearchValue && supervisorSearchValue.trim()) {
       const supervisor = availableSupervisors.find(s => 
         `${s.full_name} (${s.employee_id || 'No ID'})` === supervisorSearchValue
       );
       if (supervisor) {
         values.supervisor_id = supervisor.id;
-        console.log('Fixed supervisor_id in form submission:', supervisor.id);
       }
     }
     
@@ -215,13 +200,8 @@ function EmployeeForm({
       onFinish={handleFormFinish}
       initialValues={initialValues}
       disabled={disabled}
-      onValuesChange={(changedValues, allValues) => {
-        console.log('Form values changed:', changedValues, allValues);
-      }}
     >
-      {/* ========================================
-          BASIC INFORMATION CARD
-          ======================================== */}
+      {/* BASIC INFORMATION CARD */}
       <Card size="small" style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 16 }}>Basic Information</Title>
         
@@ -230,9 +210,11 @@ function EmployeeForm({
             <Form.Item
               label="Employee ID"
               name="employee_id"
-              help="Leave empty for supervisors/admins if they don't need employee ID"
+              rules={[
+                { required: true, message: 'Please input employee ID!' }
+              ]}
             >
-              <Input placeholder="GT001 (optional for supervisors)" />
+              <Input placeholder="GT001" />
             </Form.Item>
           </Col>
           
@@ -322,7 +304,7 @@ function EmployeeForm({
               label="User Roles"
               name="roles"
               rules={[{ required: true, message: 'Please select at least one role!' }]}
-              help="Users can have multiple roles. Select all applicable roles."
+              help="Select Admin or Employee role. Users can have multiple roles."
             >
               <Select
                 mode="multiple"
@@ -342,13 +324,11 @@ function EmployeeForm({
         </Row>
       </Card>
 
-      {/* ========================================
-          WORK INFORMATION CARD
-          ======================================== */}
+      {/* WORK INFORMATION CARD */}
       <Card size="small" style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 16 }}>Work Information</Title>
         
-        {/* NEW: Client, Department, Location Hierarchical Selector */}
+        {/* Client, Department, Location Hierarchical Selector */}
         <ClientDepartmentLocationSelector
           form={form}
           initialClient={initialValues?.client}
@@ -361,23 +341,22 @@ function EmployeeForm({
         />
 
         <Row gutter={24}>
-          {/* Position - Manual Input */}
+          {/* Position */}
           <Col xs={24} md={12}>
             <Form.Item
               label="Position"
               name="position"
               rules={[{ required: true, message: 'Please input position!' }]}
             >
-              <Input placeholder="e.g. Senior Developer, Project Supervisor, QA Engineer" />
+              <Input placeholder="e.g. Senior Developer, QA Engineer" />
             </Form.Item>
           </Col>
           
-          {/* Join Date */}
+          {/* Join Date - UPDATED: Not compulsory */}
           <Col xs={24} md={12}>
             <Form.Item
-              label="Join Date"
+              label="Join Date (Optional)"
               name="join_date"
-              rules={[{ required: true, message: 'Please select join date!' }]}
             >
               <DatePicker 
                 style={{ width: '100%' }}
@@ -398,19 +377,22 @@ function EmployeeForm({
                   options={[
                     { label: 'Active', value: 'ACTIVE' },
                     { label: 'Inactive', value: 'INACTIVE' }
-                    ]}
+                  ]}
                 />
               </Form.Item>
             </Col>
           )}
         </Row>
 
-        {/* Supervisor Selection */}
+        {/* Supervisor Selection - UPDATED: Required */}
         <Row gutter={24}>
           <Col xs={24} md={12}>
             <Form.Item
               label="Supervisor"
-              help="Type to search for supervisor by name or ID. Leave empty if no supervisor."
+              name="supervisor_id"
+              rules={[
+                { required: true, message: 'Please select a supervisor!' }
+              ]}
             >
               <AutoComplete
                 value={supervisorSearchValue}

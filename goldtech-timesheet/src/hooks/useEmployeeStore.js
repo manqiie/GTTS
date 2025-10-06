@@ -1,4 +1,4 @@
-// useEmployeeStore.js - Updated with client field
+// useEmployeeStore.js - UPDATED: Filter out users with supervisor role
 import { useState, useEffect } from 'react';
 import apiService from '../services/apiService';
 import { message } from 'antd';
@@ -7,7 +7,6 @@ export function useEmployeeStore() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load employees from API on mount
   useEffect(() => {
     loadEmployees();
   }, []);
@@ -24,10 +23,14 @@ export function useEmployeeStore() {
       });
 
       if (response.success && response.data) {
-        // Transform backend data to frontend format
-        const transformedEmployees = response.data.map(user => 
-          apiService.transformUserData(user)
-        );
+        // UPDATED: Filter out users who have supervisor role
+        const transformedEmployees = response.data
+          .map(user => apiService.transformUserData(user))
+          .filter(user => {
+            // Exclude users who have supervisor role
+            return !user.roles || !user.roles.some(role => role.name === 'supervisor');
+          });
+        
         setEmployees(transformedEmployees);
       } else {
         console.error('Failed to load users:', response.message);
@@ -46,20 +49,17 @@ export function useEmployeeStore() {
   const createEmployee = async (employeeData) => {
     try {
       const backendData = {
-        employeeId: employeeData.employee_id || null,
+        employeeId: employeeData.employee_id,
         email: employeeData.email,
         password: employeeData.password,
         fullName: employeeData.full_name,
         phone: employeeData.phone || null,
-        
-        // NEW: client field
         client: employeeData.client || null,
-        
         position: employeeData.position,
         department: employeeData.department,
         location: employeeData.location || null,
-        joinDate: employeeData.join_date,
-        supervisorId: employeeData.supervisor_id || null,
+        joinDate: employeeData.join_date || null, // UPDATED: Can be null
+        supervisorId: employeeData.supervisor_id, // UPDATED: Required
         roles: employeeData.roles
       };
 
@@ -68,7 +68,6 @@ export function useEmployeeStore() {
       if (response.success && response.data) {
         const transformedUser = apiService.transformUserData(response.data);
         
-        // Update local state
         setEmployees(prev => [...prev, transformedUser]);
         
         message.success(`User ${transformedUser.full_name} created successfully!`);
@@ -87,38 +86,25 @@ export function useEmployeeStore() {
 
   const updateEmployee = async (id, updates) => {
     try {
-      console.log('useEmployeeStore.updateEmployee called');
-      console.log('ID:', id);
-      console.log('Updates received:', updates);
-
       const backendUpdates = {
-        employeeId: updates.employee_id || null,
+        employeeId: updates.employee_id,
         email: updates.email,
         fullName: updates.full_name,
         phone: updates.phone || null,
-        
-        // NEW: client field
         client: updates.client || null,
-        
         position: updates.position,
         department: updates.department,
         location: updates.location || null,
-        joinDate: updates.join_date,
-        
-        supervisorId: updates.supervisor_id || null,
-        
+        joinDate: updates.join_date || null, // UPDATED: Can be null
+        supervisorId: updates.supervisor_id, // UPDATED: Required
         roles: updates.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
         status: updates.status
       };
 
-      console.log('Backend updates being sent:', backendUpdates);
-
       const response = await apiService.updateUser(id, backendUpdates);
-      console.log('API response:', response);
 
       if (response.success && response.data) {
         const transformedUser = apiService.transformUserData(response.data);
-        console.log('Transformed user data:', transformedUser);
         
         setEmployees(prev => 
           prev.map(emp => emp.id === id ? transformedUser : emp)
@@ -278,7 +264,6 @@ export function useEmployeeStore() {
       
       const roleStats = {
         admin: employees.filter(emp => emp.roles?.some(role => role.name === 'admin')).length,
-        supervisor: employees.filter(emp => emp.roles?.some(role => role.name === 'supervisor')).length,
         employee: employees.filter(emp => emp.roles?.some(role => role.name === 'employee')).length
       };
 
@@ -347,12 +332,21 @@ export function useEmployeeStore() {
       errors.push('Email is required');
     }
 
+    if (!employeeData.employee_id?.trim()) {
+      errors.push('Employee ID is required');
+    }
+
     if (!employeeData.position?.trim()) {
       errors.push('Position is required');
     }
 
     if (!employeeData.department?.trim()) {
       errors.push('Department is required');
+    }
+
+    // UPDATED: Supervisor is required
+    if (!employeeData.supervisor_id) {
+      errors.push('Supervisor is required');
     }
 
     if (!employeeData.roles || employeeData.roles.length === 0) {

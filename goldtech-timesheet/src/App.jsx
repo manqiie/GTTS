@@ -1,4 +1,4 @@
-// Updated App.jsx - Add history route
+// Updated App.jsx - Add supervisor management routes
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout, ConfigProvider } from 'antd';
@@ -13,6 +13,9 @@ import TimesheetHistoryPage from './pages/timesheet/TimesheetHistoryPage';
 import EmployeeManagementPage from './pages/UserManagement/EmployeeManagementPage';
 import CreateEmployeePage from './pages/UserManagement/CreateEmployeePage';
 import EditEmployeePage from './pages/UserManagement/EditEmployeePage';
+import SupervisorManagementPage from './pages/SupervisorManagement/SupervisorManagementPage';
+import CreateSupervisorPage from './pages/SupervisorManagement/CreateSupervisorPage';
+import EditSupervisorPage from './pages/SupervisorManagement/EditSupervisorPage';
 import TimesheetManagementPage from './pages/TimesheetManagementPage';
 import ApproveTimesheetPage from './pages/TimesheetApproval/ApproveTimesheetPage';
 import TimesheetReviewPage from './pages/TimesheetApproval/TimesheetReviewPage';
@@ -65,9 +68,7 @@ function AppContent() {
                   <Route path="/home" element={<HomePage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/timesheet" element={<TimesheetPage />} />
-                  <Route path="/history" element={<TimesheetHistoryPage />} /> {/* New route */}
-
- 
+                  <Route path="/history" element={<TimesheetHistoryPage />} />
                   
                   {/* Manager/Admin Routes - Timesheet Approval */}
                   <Route path="/approve" element={
@@ -85,6 +86,23 @@ function AppContent() {
                   <Route path="/timesheet-management" element={
                     <ProtectedRoute requiredPermissions={['timesheet.manage']}>
                       <TimesheetManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin Routes - Supervisor Management */}
+                  <Route path="/supervisor-management" element={
+                    <ProtectedRoute requiredPermissions={['employee.manage']}>
+                      <SupervisorManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/supervisor-management/create" element={
+                    <ProtectedRoute requiredPermissions={['employee.create']}>
+                      <CreateSupervisorPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/supervisor-management/edit/:id" element={
+                    <ProtectedRoute requiredPermissions={['employee.edit']}>
+                      <EditSupervisorPage />
                     </ProtectedRoute>
                   } />
                   

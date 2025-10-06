@@ -1,4 +1,4 @@
-// Sidebar.jsx - Updated with supervisor role changes
+// Sidebar.jsx - Updated with supervisor management menu
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Avatar, Space, Button, Modal, message } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -12,7 +12,8 @@ import {
   ContactsOutlined,
   FileTextOutlined,
   LogoutOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  UserSwitchOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -91,9 +92,14 @@ function Sidebar({ collapsed, setCollapsed }) {
           label: 'Timesheet Management',
         },
         {
+          key: 'supervisor-management',
+          icon: <UserSwitchOutlined />,
+          label: 'Supervisor Management',
+        },
+        {
           key: 'employee-management',
           icon: <TeamOutlined />,
-          label: 'User Management',
+          label: 'Employee Management',
         }
       );
     }
@@ -132,6 +138,7 @@ function Sidebar({ collapsed, setCollapsed }) {
       'history': '/history',
       'approve': '/approve',
       'timesheet-management': '/timesheet-management',
+      'supervisor-management': '/supervisor-management',
       'employee-management': '/employee-management',
       'clients': '/clients',
       'invoices': '/invoices',
@@ -146,6 +153,7 @@ function Sidebar({ collapsed, setCollapsed }) {
   // Get current selected key from location
   const getCurrentKey = () => {
     const path = location.pathname;
+    if (path.startsWith('/supervisor-management')) return 'supervisor-management';
     if (path.startsWith('/employee-management')) return 'employee-management';
     if (path.startsWith('/approve')) return 'approve';
     if (path === '/timesheet') return 'timesheet';

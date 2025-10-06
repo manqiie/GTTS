@@ -1,4 +1,4 @@
-// useEmployeeStore.js - Updated to use real API instead of localStorage
+// useEmployeeStore.js - Updated with client field
 import { useState, useEffect } from 'react';
 import apiService from '../services/apiService';
 import { message } from 'antd';
@@ -17,7 +17,7 @@ export function useEmployeeStore() {
     try {
       const response = await apiService.getUsers({
         page: 0,
-        size: 1000, // Get all users for now
+        size: 1000,
         sortBy: 'fullName',
         sortDir: 'asc',
         ...filters
@@ -45,20 +45,22 @@ export function useEmployeeStore() {
 
   const createEmployee = async (employeeData) => {
     try {
-      // Transform frontend data to backend format
       const backendData = {
         employeeId: employeeData.employee_id || null,
         email: employeeData.email,
         password: employeeData.password,
         fullName: employeeData.full_name,
         phone: employeeData.phone || null,
+        
+        // NEW: client field
+        client: employeeData.client || null,
+        
         position: employeeData.position,
         department: employeeData.department,
         location: employeeData.location || null,
-        company: employeeData.company || null,
-        joinDate: employeeData.join_date, // Should already be in YYYY-MM-DD format
+        joinDate: employeeData.join_date,
         supervisorId: employeeData.supervisor_id || null,
-        roles: employeeData.roles // Array of role IDs
+        roles: employeeData.roles
       };
 
       const response = await apiService.createUser(backendData);
@@ -83,64 +85,58 @@ export function useEmployeeStore() {
     }
   };
 
-const updateEmployee = async (id, updates) => {
-  try {
-    console.log('useEmployeeStore.updateEmployee called');
-    console.log('ID:', id);
-    console.log('Updates received:', updates);
-    console.log('Supervisor ID in updates:', updates.supervisor_id);
+  const updateEmployee = async (id, updates) => {
+    try {
+      console.log('useEmployeeStore.updateEmployee called');
+      console.log('ID:', id);
+      console.log('Updates received:', updates);
 
-    // Transform frontend updates to backend format
-    const backendUpdates = {
-      employeeId: updates.employee_id || null,
-      email: updates.email,
-      fullName: updates.full_name,
-      phone: updates.phone || null,
-      position: updates.position,
-      department: updates.department,
-      location: updates.location || null,
-      company: updates.company || null,
-      joinDate: updates.join_date,
-      
-      // CRITICAL: Map supervisor_id properly
-      supervisorId: updates.supervisor_id || null,
-      
-      roles: updates.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
-      status: updates.status
-    };
+      const backendUpdates = {
+        employeeId: updates.employee_id || null,
+        email: updates.email,
+        fullName: updates.full_name,
+        phone: updates.phone || null,
+        
+        // NEW: client field
+        client: updates.client || null,
+        
+        position: updates.position,
+        department: updates.department,
+        location: updates.location || null,
+        joinDate: updates.join_date,
+        
+        supervisorId: updates.supervisor_id || null,
+        
+        roles: updates.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
+        status: updates.status
+      };
 
-    console.log('Backend updates being sent:', backendUpdates);
-    console.log('Supervisor ID being sent to backend:', backendUpdates.supervisorId);
+      console.log('Backend updates being sent:', backendUpdates);
 
-    const response = await apiService.updateUser(id, backendUpdates);
-    console.log('API response:', response);
+      const response = await apiService.updateUser(id, backendUpdates);
+      console.log('API response:', response);
 
-    if (response.success && response.data) {
-      const transformedUser = apiService.transformUserData(response.data);
-      console.log('Transformed user data:', transformedUser);
-      console.log('Transformed supervisor fields:', {
-        supervisor_id: transformedUser.supervisor_id,
-        supervisor_name: transformedUser.supervisor_name
-      });
-      
-      // Update local state
-      setEmployees(prev => 
-        prev.map(emp => emp.id === id ? transformedUser : emp)
-      );
-      
-      message.success(`User ${transformedUser.full_name} updated successfully!`);
-      return transformedUser;
-    } else {
-      const errorMsg = response.message || 'Failed to update user';
-      message.error(errorMsg);
-      throw new Error(errorMsg);
+      if (response.success && response.data) {
+        const transformedUser = apiService.transformUserData(response.data);
+        console.log('Transformed user data:', transformedUser);
+        
+        setEmployees(prev => 
+          prev.map(emp => emp.id === id ? transformedUser : emp)
+        );
+        
+        message.success(`User ${transformedUser.full_name} updated successfully!`);
+        return transformedUser;
+      } else {
+        const errorMsg = response.message || 'Failed to update user';
+        message.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      message.error('Failed to update user: ' + error.message);
+      throw error;
     }
-  } catch (error) {
-    console.error('Error updating user:', error);
-    message.error('Failed to update user: ' + error.message);
-    throw error;
-  }
-};
+  };
 
   const deleteEmployee = async (id) => {
     try {
@@ -233,10 +229,10 @@ const updateEmployee = async (id, updates) => {
         (emp.employee_id && emp.employee_id.toLowerCase().includes(term)) ||
         emp.email.toLowerCase().includes(term) ||
         emp.position.toLowerCase().includes(term) ||
+        (emp.client && emp.client.toLowerCase().includes(term)) ||
         (emp.location && emp.location.toLowerCase().includes(term)) ||
-        (emp.manager_name && emp.manager_name.toLowerCase().includes(term)) ||
-        (emp.department && emp.department.toLowerCase().includes(term)) ||
-        (emp.company && emp.company.toLowerCase().includes(term))
+        (emp.supervisor_name && emp.supervisor_name.toLowerCase().includes(term)) ||
+        (emp.department && emp.department.toLowerCase().includes(term))
       );
     }
 
@@ -252,10 +248,15 @@ const updateEmployee = async (id, updates) => {
       );
     }
 
+    // NEW: Client filter
+    if (filters.client && filters.client !== 'all') {
+      filteredEmployees = filteredEmployees.filter(emp => emp.client === filters.client);
+    }
+
     // Other filters
     Object.keys(filters).forEach(key => {
-      if (filters[key] && filters[key] !== 'all' && key !== 'status' && key !== 'role') {
-        const field = key === 'location' ? 'location' : key;
+      if (filters[key] && filters[key] !== 'all' && key !== 'status' && key !== 'role' && key !== 'client') {
+        const field = key;
         filteredEmployees = filteredEmployees.filter(emp => emp[field] === filters[key]);
       }
     });
@@ -277,7 +278,7 @@ const updateEmployee = async (id, updates) => {
       
       const roleStats = {
         admin: employees.filter(emp => emp.roles?.some(role => role.name === 'admin')).length,
-        manager: employees.filter(emp => emp.roles?.some(role => role.name === 'manager')).length,
+        supervisor: employees.filter(emp => emp.roles?.some(role => role.name === 'supervisor')).length,
         employee: employees.filter(emp => emp.roles?.some(role => role.name === 'employee')).length
       };
 
@@ -288,10 +289,18 @@ const updateEmployee = async (id, updates) => {
         }
       });
 
-      return { total, active, inactive, roleStats, departmentStats };
+      // NEW: Client stats
+      const clientStats = {};
+      employees.forEach(emp => {
+        if (emp.client) {
+          clientStats[emp.client] = (clientStats[emp.client] || 0) + 1;
+        }
+      });
+
+      return { total, active, inactive, roleStats, departmentStats, clientStats };
     } catch (error) {
       console.error('Error getting user stats:', error);
-      return { total: 0, active: 0, inactive: 0, roleStats: {}, departmentStats: {} };
+      return { total: 0, active: 0, inactive: 0, roleStats: {}, departmentStats: {}, clientStats: {} };
     }
   };
 
@@ -361,9 +370,6 @@ const updateEmployee = async (id, updates) => {
     if (employeeData.phone && !phoneRegex.test(employeeData.phone)) {
       errors.push('Phone must be in Singapore format: +65 1234 5678');
     }
-
-    // Note: Duplicate checking is now handled by the backend
-    // The backend will return appropriate error messages
 
     return {
       isValid: errors.length === 0,

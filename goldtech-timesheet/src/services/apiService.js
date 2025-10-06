@@ -1,4 +1,4 @@
-// src/services/apiService.js - Updated with supervisor changes and hierarchical filtering
+// src/services/apiService.js - Updated with client-based hierarchical filtering
 const API_BASE_URL = 'http://localhost:8080/api';
 
 class ApiService {
@@ -125,7 +125,7 @@ class ApiService {
     return this.patch(`/users/${id}/status`);
   }
 
-  // Get supervisors for dropdown (changed from getManagers)
+  // Get supervisors for dropdown 
   async getSupervisors() {
     return this.get('/users/supervisors');
   }
@@ -155,11 +155,11 @@ class ApiService {
     return this.patch(`/users/${id}/reset-password`, { newPassword });
   }
 
-  // Hierarchical filtering methods
+  // Hierarchical filtering methods - UPDATED WITH CLIENT
 
-  // Get all locations
-  async getLocations() {
-    return this.get('/users/filter-options/locations');
+  // Get all clients
+  async getClients() {
+    return this.get('/users/filter-options/clients');
   }
 
   // Get all departments
@@ -167,81 +167,83 @@ class ApiService {
     return this.get('/users/filter-options/departments');
   }
 
-  // Get departments by location
-  async getDepartmentsByLocation(location) {
-    return this.get('/users/filter-options/departments', { location });
+  // Get departments by client
+  async getDepartmentsByClient(client) {
+    return this.get('/users/filter-options/departments', { client });
   }
 
-  // Get all positions
-  async getAllPositions() {
-    return this.get('/users/filter-options/positions');
-  }
-
-  // Get positions by location and department
-  async getPositionsByFilters(location = null, department = null) {
+  // Get locations by client and department
+  async getLocationsByFilters(client = null, department = null) {
     const params = {};
-    if (location) params.location = location;
+    if (client) params.client = client;
     if (department) params.department = department;
+    return this.get('/users/filter-options/locations', params);
+  }
+
+  // Get positions by client, department, and location
+  async getPositionsByFilters(client = null, department = null, location = null) {
+    const params = {};
+    if (client) params.client = client;
+    if (department) params.department = department;
+    if (location) params.location = location;
     return this.get('/users/filter-options/positions', params);
   }
 
-  // Get roles by location
-  async getRolesByLocation(location) {
-    return this.get('/users/filter-options/roles', { location });
-  }
-
-  // Get roles by location and department
-  async getRolesByFilters(location = null, department = null) {
+  //  Get roles by client and department
+  async getRolesByFilters(client = null, department = null) {
     const params = {};
-    if (location) params.location = location;
+    if (client) params.client = client;
     if (department) params.department = department;
     return this.get('/users/filter-options/roles', params);
   }
 
-// Transform backend user data to frontend format
-transformUserData(backendUser) {
-  return {
-    id: backendUser.id,
-    employee_id: backendUser.employeeId,
-    email: backendUser.email,
-    full_name: backendUser.fullName,
-    phone: backendUser.phone,
-    position: backendUser.position,
-    department: backendUser.department,
-    location: backendUser.location,
-    join_date: backendUser.joinDate,
-    
-    // CLEAN: Only supervisor fields - no manager fields
-    supervisor_id: backendUser.supervisorId, 
-    supervisor_name: backendUser.supervisorName,
-    
-    status: backendUser.status,
-    roles: backendUser.roles || [],
-    created_at: backendUser.createdAt,
-    updated_at: backendUser.updatedAt,
-    last_login_at: backendUser.lastLoginAt
-  };
-}
+  // Transform backend user data to frontend format
+  transformUserData(backendUser) {
+    return {
+      id: backendUser.id,
+      employee_id: backendUser.employeeId,
+      email: backendUser.email,
+      full_name: backendUser.fullName,
+      phone: backendUser.phone,
+      
+   
+      client: backendUser.client,
+      position: backendUser.position,
+      department: backendUser.department,
+      location: backendUser.location,
+      join_date: backendUser.joinDate,
+      
+      supervisor_id: backendUser.supervisorId, 
+      supervisor_name: backendUser.supervisorName,
+      
+      status: backendUser.status,
+      roles: backendUser.roles || [],
+      created_at: backendUser.createdAt,
+      updated_at: backendUser.updatedAt,
+      last_login_at: backendUser.lastLoginAt
+    };
+  }
 
-// Transform frontend user data to backend format
-transformToBackendFormat(frontendUser) {
-  return {
-    employeeId: frontendUser.employee_id || null,
-    email: frontendUser.email,
-    fullName: frontendUser.full_name,
-    phone: frontendUser.phone || null,
-    position: frontendUser.position,
-    department: frontendUser.department,
-    location: frontendUser.location || null,
-    joinDate: frontendUser.join_date,
-    
-    // CLEAN: Only supervisor field
-    supervisorId: frontendUser.supervisor_id || null,
-    
-    roles: frontendUser.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
-    status: frontendUser.status
-  };
-}
+  // Transform frontend user data to backend format
+  transformToBackendFormat(frontendUser) {
+    return {
+      employeeId: frontendUser.employee_id || null,
+      email: frontendUser.email,
+      fullName: frontendUser.full_name,
+      phone: frontendUser.phone || null,
+      
+      client: frontendUser.client || null,
+      position: frontendUser.position,
+      department: frontendUser.department,
+      location: frontendUser.location || null,
+      joinDate: frontendUser.join_date,
+      
+      supervisorId: frontendUser.supervisor_id || null,
+      
+      roles: frontendUser.roles?.map(role => typeof role === 'object' ? role.id : role) || [],
+      status: frontendUser.status
+    };
+  }
 }
 
 // Export singleton instance

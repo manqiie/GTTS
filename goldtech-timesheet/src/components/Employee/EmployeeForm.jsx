@@ -1,10 +1,10 @@
-// EmployeeForm.jsx - COMPLETE VERSION with LocationDepartmentSelector integration
+// EmployeeForm.jsx - UPDATED with ClientDepartmentLocationSelector
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import apiService from '../../services/apiService';
-import LocationDepartmentSelector from './LocationDepartmentSelector';
+import ClientDepartmentLocationSelector from './ClientDepartmentLocationSelector';
 
 const { Title } = Typography;
 
@@ -22,18 +22,15 @@ function EmployeeForm({
   const [loadingSupervisors, setLoadingSupervisors] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
 
-  // Load roles and supervisors on component mount
   useEffect(() => {
     loadRoles();
     loadSupervisors();
   }, []);
 
-  // Update supervisor options when search value changes
   useEffect(() => {
     filterSupervisorOptions(supervisorSearchValue);
   }, [supervisorSearchValue, availableSupervisors]);
 
-  // Set initial supervisor search value when editing with better sync
   useEffect(() => {
     console.log('Initial values changed:', initialValues);
     console.log('Available supervisors:', availableSupervisors);
@@ -50,14 +47,12 @@ function EmployeeForm({
           const displayValue = `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`;
           setSupervisorSearchValue(displayValue);
           
-          // Force update the form field value
           setTimeout(() => {
             form.setFieldValue('supervisor_id', supervisor.id);
             console.log('Form field supervisor_id set to:', supervisor.id);
           }, 100);
         }
       } else {
-        // No supervisor assigned
         setSupervisorSearchValue('');
         form.setFieldValue('supervisor_id', null);
       }
@@ -162,7 +157,6 @@ function EmployeeForm({
       setSupervisorSearchValue(value);
       console.log('Set supervisor_id to:', option.supervisorId);
       
-      // Show success message
       const supervisor = availableSupervisors.find(s => s.id === option.supervisorId);
       if (supervisor) {
         message.success(`Selected supervisor: ${supervisor.full_name}`);
@@ -175,13 +169,11 @@ function EmployeeForm({
     setSupervisorSearchValue(value);
     
     if (value === '') {
-      // Clear supervisor if search is empty
       form.setFieldValue('supervisor_id', null);
       console.log('Cleared supervisor_id');
       return;
     }
     
-    // Check if the value matches an existing supervisor
     const matchedSupervisor = availableSupervisors.find(supervisor => 
       `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})` === value
     );
@@ -199,13 +191,11 @@ function EmployeeForm({
     message.info('Supervisor cleared');
   };
 
-  // Custom form finish handler to debug values
   const handleFormFinish = (values) => {
     console.log('Form submitted with values:', values);
     console.log('Supervisor ID in form:', values.supervisor_id);
     
     if (!values.supervisor_id && supervisorSearchValue && supervisorSearchValue.trim()) {
-      // Try to find supervisor by search value
       const supervisor = availableSupervisors.find(s => 
         `${s.full_name} (${s.employee_id || 'No ID'})` === supervisorSearchValue
       );
@@ -358,14 +348,16 @@ function EmployeeForm({
       <Card size="small" style={{ marginBottom: 24 }}>
         <Title level={5} style={{ marginBottom: 16 }}>Work Information</Title>
         
-        {/* NEW: Location and Department Hierarchical Selector */}
-        <LocationDepartmentSelector
+        {/* NEW: Client, Department, Location Hierarchical Selector */}
+        <ClientDepartmentLocationSelector
           form={form}
-          initialLocation={initialValues?.location}
+          initialClient={initialValues?.client}
           initialDepartment={initialValues?.department}
+          initialLocation={initialValues?.location}
           disabled={disabled}
-          locationRequired={false}
+          clientRequired={false}
           departmentRequired={true}
+          locationRequired={false}
         />
 
         <Row gutter={24}>
@@ -406,7 +398,7 @@ function EmployeeForm({
                   options={[
                     { label: 'Active', value: 'ACTIVE' },
                     { label: 'Inactive', value: 'INACTIVE' }
-                  ]}
+                    ]}
                 />
               </Form.Item>
             </Col>

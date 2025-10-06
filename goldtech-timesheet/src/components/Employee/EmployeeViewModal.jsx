@@ -1,4 +1,4 @@
-// EmployeeViewModal.jsx (keeping filename but updating for user management)
+// EmployeeViewModal.jsx - Updated with client field
 import React from 'react';
 import { Modal, Descriptions, Tag, Space } from 'antd';
 import { 
@@ -8,7 +8,8 @@ import {
   BankOutlined,
   TeamOutlined,
   CalendarOutlined,
-  CrownOutlined
+  CrownOutlined,
+  ShopOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -18,7 +19,7 @@ function EmployeeViewModal({ visible, employee, onClose }) {
   const getRoleColor = (roleName) => {
     const colors = {
       admin: 'red',
-      manager: 'orange',
+      supervisor: 'orange',
       employee: 'blue'
     };
     return colors[roleName] || 'default';
@@ -71,19 +72,19 @@ function EmployeeViewModal({ visible, employee, onClose }) {
         <Descriptions.Item label="Position" span={1}>
           {employee.position}
         </Descriptions.Item>
+        <Descriptions.Item label={<Space><ShopOutlined />Client</Space>} span={1}>
+          {employee.client || <span style={{ color: '#999' }}>N/A</span>}
+        </Descriptions.Item>
+
         <Descriptions.Item label={<Space><BankOutlined />Department</Space>} span={1}>
           {employee.department}
         </Descriptions.Item>
-
         <Descriptions.Item label="Location" span={1}>
           {employee.location || <span style={{ color: '#999' }}>N/A</span>}
         </Descriptions.Item>
-        <Descriptions.Item label="Company" span={1}>
-          {employee.company || <span style={{ color: '#999' }}>N/A</span>}
-        </Descriptions.Item>
 
-        <Descriptions.Item label={<Space><TeamOutlined />Manager</Space>} span={2}>
-          {employee.manager_name || <span style={{ color: '#999' }}>N/A</span>}
+        <Descriptions.Item label={<Space><TeamOutlined />Supervisor</Space>} span={2}>
+          {employee.supervisor_name || <span style={{ color: '#999' }}>N/A</span>}
         </Descriptions.Item>
 
         <Descriptions.Item label={<Space><CalendarOutlined />Join Date</Space>} span={1}>

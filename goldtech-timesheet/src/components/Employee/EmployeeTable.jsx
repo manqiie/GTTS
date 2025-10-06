@@ -20,18 +20,6 @@ function EmployeeTable({
 
   const columns = [
     {
-      title: 'Employee ID',
-      dataIndex: 'employee_id',
-      key: 'employee_id',
-      width: 120,
-      sorter: (a, b) => {
-        const aId = a.employee_id || '';
-        const bId = b.employee_id || '';
-        return aId.localeCompare(bId);
-      },
-      render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
-    },
-    {
       title: 'Name',
       dataIndex: 'full_name',
       key: 'full_name',

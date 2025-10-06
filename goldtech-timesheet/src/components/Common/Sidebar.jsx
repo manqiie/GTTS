@@ -104,28 +104,7 @@ function Sidebar({ collapsed, setCollapsed }) {
       );
     }
 
-    if (user?.roles?.some(role => role.name === 'admin')) {
-      baseItems.push(
-        {
-          key: 'clients',
-          icon: <ContactsOutlined />,
-          label: 'Client Management',
-        },
-        {
-          type: 'divider',
-        },
-        {
-          key: 'reports-group',
-          label: 'Reports',
-          type: 'group',
-        },
-        {
-          key: 'invoices',
-          icon: <FileTextOutlined />,
-          label: 'Invoice Generator',
-        }
-      );
-    }
+
 
     return baseItems;
   };
@@ -140,8 +119,6 @@ function Sidebar({ collapsed, setCollapsed }) {
       'timesheet-management': '/timesheet-management',
       'supervisor-management': '/supervisor-management',
       'employee-management': '/employee-management',
-      'clients': '/clients',
-      'invoices': '/invoices',
     };
 
     const route = routeMap[e.key];
@@ -161,8 +138,6 @@ function Sidebar({ collapsed, setCollapsed }) {
     if (path === '/profile') return 'profile';
     if (path === '/history') return 'history';
     if (path === '/timesheet-management') return 'timesheet-management';
-    if (path === '/clients') return 'clients';
-    if (path === '/invoices') return 'invoices';
     return 'home';
   };
 

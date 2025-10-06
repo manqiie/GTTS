@@ -1,4 +1,4 @@
-// EmployeeForm.jsx - UPDATED with ClientDepartmentLocationSelector
+// EmployeeForm.jsx - UPDATED: Only show supervisor role option when editing
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
@@ -21,6 +21,9 @@ function EmployeeForm({
   const [supervisorSearchValue, setSupervisorSearchValue] = useState('');
   const [loadingSupervisors, setLoadingSupervisors] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
+
+  // Check if this is edit mode (has initialValues)
+  const isEditMode = !!initialValues;
 
   useEffect(() => {
     loadRoles();
@@ -58,24 +61,49 @@ function EmployeeForm({
     try {
       const response = await apiService.getRoles();
       if (response.success && response.data) {
-        // UPDATED: Filter out supervisor role - only show admin and employee
-        const filteredRoles = response.data.filter(role => 
-          role.name === 'admin' || role.name === 'employee'
-        );
+        // UPDATED: Filter roles based on mode
+        let filteredRoles;
+        if (isEditMode) {
+          // In edit mode, show all roles including supervisor
+          filteredRoles = response.data;
+        } else {
+          // In create mode, only show admin and employee roles
+          filteredRoles = response.data.filter(role => 
+            role.name === 'admin' || role.name === 'employee'
+          );
+        }
         setAvailableRoles(filteredRoles);
       } else {
         console.error('Failed to load roles:', response.message);
+        // Fallback roles based on mode
+        if (isEditMode) {
+          setAvailableRoles([
+            { id: 1, name: 'admin', description: 'Administrator' },
+            { id: 2, name: 'supervisor', description: 'Supervisor' },
+            { id: 3, name: 'employee', description: 'Employee' }
+          ]);
+        } else {
+          setAvailableRoles([
+            { id: 1, name: 'admin', description: 'Administrator' },
+            { id: 3, name: 'employee', description: 'Employee' }
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      // Fallback roles based on mode
+      if (isEditMode) {
+        setAvailableRoles([
+          { id: 1, name: 'admin', description: 'Administrator' },
+          { id: 2, name: 'supervisor', description: 'Supervisor' },
+          { id: 3, name: 'employee', description: 'Employee' }
+        ]);
+      } else {
         setAvailableRoles([
           { id: 1, name: 'admin', description: 'Administrator' },
           { id: 3, name: 'employee', description: 'Employee' }
         ]);
       }
-    } catch (error) {
-      console.error('Error loading roles:', error);
-      setAvailableRoles([
-        { id: 1, name: 'admin', description: 'Administrator' },
-        { id: 3, name: 'employee', description: 'Employee' }
-      ]);
     } finally {
       setLoadingRoles(false);
     }
@@ -304,7 +332,11 @@ function EmployeeForm({
               label="User Roles"
               name="roles"
               rules={[{ required: true, message: 'Please select at least one role!' }]}
-              help="Select Admin or Employee role. Users can have multiple roles."
+              help={
+                isEditMode 
+                  ? "Select user roles. Available roles: Admin, Supervisor, and Employee. Users can have multiple roles."
+                  : "Select Admin or Employee role. Users can have multiple roles. Note: Supervisor role can only be assigned when editing existing users."
+              }
             >
               <Select
                 mode="multiple"

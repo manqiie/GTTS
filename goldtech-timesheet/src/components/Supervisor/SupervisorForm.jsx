@@ -1,186 +1,208 @@
-// SupervisorTable.jsx
-import React from 'react';
-import { Table, Tag, Space, Button, Popconfirm, Tooltip } from 'antd';
-import { 
-  EyeOutlined, 
-  EditOutlined, 
-  UserDeleteOutlined,
-  UserAddOutlined 
-} from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
+// SupervisorForm.jsx - Form for creating/editing supervisors
+import React, { useState, useEffect } from 'react';
+import { Form, Input, Select, Row, Col, Card, Typography, message } from 'antd';
+import apiService from '../../services/apiService';
+import ClientDepartmentLocationSelector from '../Employee/ClientDepartmentLocationSelector';
 
-function SupervisorTable({ 
-  supervisors, 
-  loading, 
-  onView, 
-  onToggleStatus 
+const { Title } = Typography;
+
+function SupervisorForm({ 
+  form, 
+  initialValues, 
+  onFinish, 
+  submitButton,
+  disabled = false,
+  isEdit = false
 }) {
-  const navigate = useNavigate();
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
-  const columns = [
-    {
-      title: 'Name',
-      dataIndex: 'full_name',
-      key: 'full_name',
-      sorter: (a, b) => a.full_name.localeCompare(b.full_name),
-      render: (text, record) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{text}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.email}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Roles',
-      dataIndex: 'roles',
-      key: 'roles',
-      width: 150,
-      filters: [
-        { text: 'Admin', value: 'admin' },
-        { text: 'Supervisor', value: 'supervisor' },
-        { text: 'Employee', value: 'employee' },
-      ],
-      onFilter: (value, record) => {
-        return record.roles && record.roles.some(role => role.name === value);
-      },
-      render: (roles) => (
-        <div>
-          {roles && roles.map(role => (
-            <Tag 
-              key={role.id} 
-              color={
-                role.name === 'admin' ? 'red' : 
-                role.name === 'supervisor' ? 'orange' : 
-                'blue'
-              }
-              style={{ marginBottom: 2 }}
-            >
-              {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
-            </Tag>
-          ))}
-        </div>
-      ),
-    },
-    {
-      title: 'Client',
-      dataIndex: 'client',
-      key: 'client',
-      sorter: (a, b) => {
-        const aClient = a.client || '';
-        const bClient = b.client || '';
-        return aClient.localeCompare(bClient);
-      },
-      render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
-    },
-    {
-      title: 'Department',
-      dataIndex: 'department',
-      key: 'department',
-      sorter: (a, b) => {
-        const aDept = a.department || '';
-        const bDept = b.department || '';
-        return aDept.localeCompare(bDept);
-      },
-      render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
-    },
-    {
-      title: 'Location',
-      dataIndex: 'location',
-      key: 'location',
-      sorter: (a, b) => {
-        const aLocation = a.location || '';
-        const bLocation = b.location || '';
-        return aLocation.localeCompare(bLocation);
-      },
-      render: (text) => text || <span style={{ color: '#999' }}>N/A</span>
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      filters: [
-        { text: 'Active', value: 'ACTIVE' },
-        { text: 'Inactive', value: 'INACTIVE' },
-      ],
-      onFilter: (value, record) => record.status === value,
-      render: (status) => (
-        <Tag color={status === 'ACTIVE' ? 'green' : 'red'}>
-          {status === 'ACTIVE' ? 'Active' : 'Inactive'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Created',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 120,
-      sorter: (a, b) => dayjs(a.created_at).unix() - dayjs(b.created_at).unix(),
-      render: (date) => dayjs(date).format('MMM DD, YYYY'),
-    },
-    {
-      title: 'Action',
-      key: 'action',
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="View Details">
-            <Button 
-              type="text" 
-              icon={<EyeOutlined />} 
-              onClick={() => onView(record)}
-              size="small"
-            />
-          </Tooltip>
-          
-          <Tooltip title="Edit Supervisor">
-            <Button 
-              type="text" 
-              icon={<EditOutlined />} 
-              onClick={() => navigate(`/supervisor-management/edit/${record.id}`)}
-              size="small"
-            />
-          </Tooltip>
-          
-          <Popconfirm
-            title={`${record.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} Supervisor`}
-            description={`Are you sure you want to ${record.status === 'ACTIVE' ? 'deactivate' : 'activate'} ${record.full_name}?`}
-            onConfirm={() => onToggleStatus(record.id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Tooltip title={record.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}>
-              <Button 
-                type="text" 
-                icon={record.status === 'ACTIVE' ? <UserDeleteOutlined /> : <UserAddOutlined />}
-                danger={record.status === 'ACTIVE'}
-                size="small"
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  useEffect(() => {
+    loadRoles();
+  }, []);
+
+  const loadRoles = async () => {
+    setLoadingRoles(true);
+    try {
+      const response = await apiService.getRoles();
+      if (response.success && response.data) {
+        // Filter to only show supervisor and employee roles
+        const filteredRoles = response.data.filter(role => 
+          role.name === 'supervisor' || role.name === 'employee'
+        );
+        setAvailableRoles(filteredRoles);
+      } else {
+        console.error('Failed to load roles:', response.message);
+        setAvailableRoles([
+          { id: 2, name: 'supervisor', description: 'Supervisor' },
+          { id: 3, name: 'employee', description: 'Employee' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      setAvailableRoles([
+        { id: 2, name: 'supervisor', description: 'Supervisor' },
+        { id: 3, name: 'employee', description: 'Employee' }
+      ]);
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
+
+  const handleFormFinish = (values) => {
+    onFinish(values);
+  };
 
   return (
-    <Table
-      columns={columns}
-      dataSource={supervisors}
-      loading={loading}
-      rowKey="id"
-      pagination={{
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total, range) => 
-          `${range[0]}-${range[1]} of ${total} supervisors`,
-        pageSizeOptions: ['10', '20', '50', '100'],
-        defaultPageSize: 10,
-      }}
-      scroll={{ x: 1200 }}
-    />
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleFormFinish}
+      initialValues={initialValues}
+      disabled={disabled}
+    >
+      {/* BASIC INFORMATION CARD */}
+      <Card size="small" style={{ marginBottom: 24 }}>
+        <Title level={5} style={{ marginBottom: 16 }}>Basic Information</Title>
+        
+        <Row gutter={24}>
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Full Name"
+              name="full_name"
+              rules={[
+                { required: true, message: 'Please input full name!' },
+                { min: 2, message: 'Name must be at least 2 characters' }
+              ]}
+            >
+              <Input placeholder="Alice Johnson" />
+            </Form.Item>
+          </Col>
+          
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Email"
+              name="email"
+              rules={[
+                { required: true, message: 'Please input email!' },
+                { type: 'email', message: 'Please input valid email!' }
+              ]}
+            >
+              <Input placeholder="alice.johnson@goldtech.com" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        {/* Password fields - only shown when creating new supervisor */}
+        {!isEdit && (
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Password"
+                name="password"
+                rules={[
+                  { required: true, message: 'Please input password!' },
+                  { min: 6, message: 'Password must be at least 6 characters' }
+                ]}
+              >
+                <Input.Password placeholder="Enter password" />
+              </Form.Item>
+            </Col>
+            
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Confirm Password"
+                name="confirmPassword"
+                dependencies={['password']}
+                rules={[
+                  { required: true, message: 'Please confirm password!' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('password') === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('The two passwords do not match!'));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder="Confirm password" />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
+        <Row gutter={24}>
+          <Col xs={24} md={24}>
+            <Form.Item
+              label="User Roles"
+              name="roles"
+              rules={[{ required: true, message: 'Please select at least one role!' }]}
+              help="Supervisors must have the Supervisor role. They can also have Employee role."
+              initialValue={[2]} // Default to supervisor 
+            >
+              <Select
+                mode="multiple"
+                placeholder="Select user roles"
+                loading={loadingRoles}
+                options={availableRoles.map(role => ({
+                  label: `${role.description} (${role.name})`,
+                  value: role.id
+                }))}
+                showSearch
+                filterOption={(input, option) =>
+                  option.label.toLowerCase().includes(input.toLowerCase())
+                }
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* WORK INFORMATION CARD */}
+      <Card size="small" style={{ marginBottom: 24 }}>
+        <Title level={5} style={{ marginBottom: 16 }}>Work Assignment (Optional)</Title>
+        
+        {/* Client, Department, Location Hierarchical Selector */}
+        <ClientDepartmentLocationSelector
+          form={form}
+          initialClient={initialValues?.client}
+          initialDepartment={initialValues?.department}
+          initialLocation={initialValues?.location}
+          disabled={disabled}
+          clientRequired={false}
+          departmentRequired={false}
+          locationRequired={false}
+        />
+
+        {/* Status - only shown when editing */}
+        {isEdit && (
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Status"
+                name="status"
+              >
+                <Select
+                  options={[
+                    { label: 'Active', value: 'ACTIVE' },
+                    { label: 'Inactive', value: 'INACTIVE' }
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+      </Card>
+
+      {/* Submit Button */}
+      {submitButton && (
+        <Form.Item style={{ marginTop: 24 }}>
+          {submitButton}
+        </Form.Item>
+      )}
+    </Form>
   );
 }
 
-export default SupervisorTable;
+export default SupervisorForm;

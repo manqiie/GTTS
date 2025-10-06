@@ -1,5 +1,5 @@
-// CreateSupervisorPage.jsx - FIXED
-import React, { useEffect } from 'react';
+// CreateSupervisorPage.jsx
+import React from 'react';
 import { Form, Button, message } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -12,17 +12,8 @@ function CreateSupervisorPage() {
   const navigate = useNavigate();
   const { createSupervisor } = useSupervisorStore();
 
-  // Set initial values for form
-  useEffect(() => {
-    form.setFieldsValue({
-      status: 'ACTIVE'
-    });
-  }, [form]);
-
   const handleFinish = async (values) => {
     try {
-      console.log('Form values:', values);
-
       const supervisorData = {
         email: values.email,
         password: values.password,
@@ -30,10 +21,8 @@ function CreateSupervisorPage() {
         client: values.client || null,
         department: values.department || null,
         location: values.location || null,
-        roles: values.roles
+        roles: values.roles // Will contain supervisor role by default
       };
-
-      console.log('Creating supervisor with data:', supervisorData);
 
       const newSupervisor = await createSupervisor(supervisorData);
       
@@ -79,7 +68,6 @@ function CreateSupervisorPage() {
           form={form}
           onFinish={handleFinish}
           submitButton={submitButton}
-          isEdit={false}
         />
       </div>
     </div>

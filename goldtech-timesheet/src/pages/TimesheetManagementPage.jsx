@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Button, message } from 'antd';
 import PageHeader from '../components/Common/PageHeader';
 import TimesheetFilters from '../components/TimesheetManagement/TimesheetFilters';
@@ -7,6 +8,7 @@ import ViewTimesheetModal from '../components/TimesheetManagement/ViewTimesheetM
 import { useTimesheetManagement } from '../hooks/useTimesheetManagementStore';
 
 function TimesheetManagementPage() {
+  const navigate = useNavigate();
   const {
     timesheets,
     loading,
@@ -107,8 +109,9 @@ function TimesheetManagementPage() {
   };
 
   const handleEdit = (timesheet) => {
-    console.log('Edit timesheet:', timesheet);
-    message.info('Edit functionality coming soon');
+    console.log('Edit timesheet:', timesheet);;
+    // Navigate to admin edit page - note the updated path
+    navigate(`/timesheet-management/edit/${timesheet.userId}?year=${timesheet.year}&month=${timesheet.month}`);
   };
 
   const handleDownload = (timesheet) => {

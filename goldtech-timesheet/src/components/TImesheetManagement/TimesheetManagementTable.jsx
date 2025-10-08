@@ -15,7 +15,7 @@ function TimesheetManagementTable({
     {
       title: 'Employee',
       key: 'employee',
-      width: 180,
+      width: 160,
       fixed: 'left',
       sorter: (a, b) => a.employeeName.localeCompare(b.employeeName),
       render: (_, record) => (
@@ -23,7 +23,7 @@ function TimesheetManagementTable({
           <div style={{ fontWeight: 500 }}>
             {record.employeeName}
           </div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.employeeId}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{record.email}</div>
         </div>
       ),
     },

@@ -19,6 +19,7 @@ import EditSupervisorPage from './pages/SupervisorManagement/EditSupervisorPage'
 import TimesheetManagementPage from './pages/TimesheetManagementPage';
 import ApproveTimesheetPage from './pages/TimesheetApproval/ApproveTimesheetPage';
 import TimesheetReviewPage from './pages/TimesheetApproval/TimesheetReviewPage';
+import AdminTimesheetEditPage from './pages/AdminTimesheetEditPage';
 import './App.css';
 
 const { Content } = Layout;
@@ -86,6 +87,13 @@ function AppContent() {
                   <Route path="/timesheet-management" element={
                     <ProtectedRoute requiredPermissions={['timesheet.manage']}>
                       <TimesheetManagementPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Admin Route - Edit Employee Timesheet */}
+                  <Route path="/timesheet-management/edit/:userId" element={
+                    <ProtectedRoute requiredPermissions={['timesheet.manage']}>
+                      <AdminTimesheetEditPage />
                     </ProtectedRoute>
                   } />
                   

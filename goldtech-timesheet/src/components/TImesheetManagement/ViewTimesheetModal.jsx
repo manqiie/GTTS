@@ -278,6 +278,37 @@ function ViewTimesheetModal({
             </Descriptions>
           )}
 
+        {/* Admin Edit Information (if edited) */}
+        {timesheetDetails?.editedBy && (
+          <Descriptions 
+            bordered 
+            column={1} 
+            size="small" 
+            style={{ marginBottom: 20 }}
+            title={
+              <span style={{ color: '#fa8c16' }}>
+                Admin Edit History
+              </span>
+            }
+          >
+            <Descriptions.Item label="Edited By">
+              {timesheetDetails.editedBy}
+            </Descriptions.Item>
+            {timesheetDetails.editedAt && (
+              <Descriptions.Item label="Edited At">
+                {dayjs(timesheetDetails.editedAt).format('MMMM DD, YYYY HH:mm')}
+              </Descriptions.Item>
+            )}
+            {timesheetDetails.editReason && (
+              <Descriptions.Item label="Edit Reason">
+                <Text style={{ color: '#fa8c16' }}>
+                  {timesheetDetails.editReason}
+                </Text>
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        )}
+
           {/* Daily Timesheet Table */}
           <div style={{ marginTop: 20 }}>
             <Text strong style={{ fontSize: '16px', marginBottom: 16, display: 'block' }}>

@@ -98,15 +98,22 @@ export const timesheetManagementApi = {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Get filename from Content-Disposition header
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'timesheet.pdf';
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1].replace(/['"]/g, '');
-        }
+    // IMPROVED CODE:
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'timesheet.pdf'; // default fallback
+
+    if (contentDisposition) {
+      // Try to extract filename from Content-Disposition header
+      // Handle both: filename="..." and filename*=UTF-8''...
+      const filenameRegex = /filename[^;=\n]*=["']?([^"';\n]+)["']?/;
+      const match = contentDisposition.match(filenameRegex);
+      
+      if (match && match[1]) {
+        filename = decodeURIComponent(match[1].trim());
       }
+    }
+    console.log('Content-Disposition header:', contentDisposition);
+    console.log('Extracted filename:', filename);
 
       // Get the PDF blob
       const blob = await response.blob();

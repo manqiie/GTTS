@@ -74,5 +74,58 @@ export const timesheetManagementApi = {
     const endpoint = `/timesheets/management/filters${queryString ? `?${queryString}` : ''}`;
     
     return apiRequest(endpoint);
+  },
+
+  // Download timesheet as PDF 
+  downloadTimesheetPdf: async (timesheetId) => {
+    const token = getAuthToken();
+    const url = `${API_BASE_URL}/timesheets/management/${timesheetId}/download`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'timesheet.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+
+      // Create download link
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      return { success: true, message: 'PDF downloaded successfully' };
+
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      throw error;
+    }
   }
-};
+}; 

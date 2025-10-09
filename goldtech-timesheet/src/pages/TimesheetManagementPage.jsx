@@ -6,8 +6,10 @@ import TimesheetFilters from '../components/TimesheetManagement/TimesheetFilters
 import TimesheetManagementTable from '../components/TimesheetManagement/TimesheetManagementTable';
 import ViewTimesheetModal from '../components/TimesheetManagement/ViewTimesheetModal';
 import { useTimesheetManagement } from '../hooks/useTimesheetManagementStore';
+import { timesheetManagementApi } from '../services/timesheetManagementApi';
 
 function TimesheetManagementPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const {
     timesheets,
@@ -114,9 +116,21 @@ function TimesheetManagementPage() {
     navigate(`/timesheet-management/edit/${timesheet.userId}?year=${timesheet.year}&month=${timesheet.month}`);
   };
 
-  const handleDownload = (timesheet) => {
-    console.log('Download timesheet:', timesheet);
-    message.info('Download functionality coming soon');
+  const handleDownload = async (timesheet) => {
+    console.log('Download clicked for timesheet:', timesheet);
+    console.log('Timesheet ID:', timesheet.timesheetId);
+    
+    try {
+      messageApi.loading({ content: 'Generating PDF...', key: 'pdf-download' });
+      
+      const result = await timesheetManagementApi.downloadTimesheetPdf(timesheet.timesheetId);
+      console.log('Download result:', result);
+      
+      messageApi.success({ content: 'PDF downloaded!', key: 'pdf-download', duration: 2 });
+    } catch (error) {
+      console.error('Download error:', error);
+      messageApi.error({ content: 'Failed to download PDF: ' + error.message, key: 'pdf-download', duration: 3 });
+    }
   };
 
   const handleCloseViewModal = () => {
@@ -132,6 +146,7 @@ function TimesheetManagementPage() {
 
   return (
     <div>
+      {contextHolder}
       <PageHeader
         title="Timesheet Management"
         breadcrumbs={breadcrumbs}

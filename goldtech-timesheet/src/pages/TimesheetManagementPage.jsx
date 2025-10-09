@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, message } from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
 import PageHeader from '../components/Common/PageHeader';
 import TimesheetFilters from '../components/TimesheetManagement/TimesheetFilters';
 import TimesheetManagementTable from '../components/TimesheetManagement/TimesheetManagementTable';
@@ -37,6 +38,7 @@ function TimesheetManagementPage() {
   const [selectedTimesheet, setSelectedTimesheet] = useState(null);
   const [timesheetDetails, setTimesheetDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Load timesheets on mount and when filters change
   useEffect(() => {
@@ -144,6 +146,70 @@ function TimesheetManagementPage() {
     { title: 'Timesheet Management' }
   ];
 
+  // Generate filter description for ZIP filename
+  const generateFilterDescription = () => {
+    const parts = [];
+    
+    if (filters.client !== 'all') parts.push(filters.client);
+    if (filters.department !== 'all') parts.push(filters.department);
+    if (filters.location !== 'all') parts.push(filters.location);
+    if (filters.status !== 'all') {
+      const statusMap = {
+        'submitted': 'Pending',
+        'approved': 'Approved',
+        'rejected': 'Rejected'
+      };
+      parts.push(statusMap[filters.status] || filters.status);
+    }
+    if (filters.month !== 'all') {
+      const monthName = new Date(2024, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' });
+      parts.push(monthName);
+    }
+    if (filters.year !== 'all') parts.push(filters.year);
+    
+    return parts.length > 0 ? parts.join('_') : 'All_Timesheets';
+  };
+
+  const handleBulkExport = async () => {
+    if (filteredTimesheets.length === 0) {
+      messageApi.warning('No timesheets to export');
+      return;
+    }
+
+    try {
+      setExportLoading(true);
+      messageApi.loading({ 
+        content: `Generating ${filteredTimesheets.length} PDF(s)...`, 
+        key: 'bulk-export',
+        duration: 0 
+      });
+
+      const timesheetIds = filteredTimesheets.map(ts => ts.timesheetId);
+      const filterDescription = generateFilterDescription();
+
+      const result = await timesheetManagementApi.bulkDownloadTimesheets(
+        timesheetIds, 
+        filterDescription
+      );
+
+      messageApi.success({ 
+        content: `Successfully exported ${filteredTimesheets.length} timesheet(s)!`, 
+        key: 'bulk-export',
+        duration: 3 
+      });
+
+    } catch (error) {
+      console.error('Bulk export error:', error);
+      messageApi.error({ 
+        content: 'Failed to export timesheets: ' + error.message, 
+        key: 'bulk-export',
+        duration: 3 
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+  
   return (
     <div>
       {contextHolder}
@@ -151,7 +217,17 @@ function TimesheetManagementPage() {
         title="Timesheet Management"
         breadcrumbs={breadcrumbs}
         description="View and manage all employee timesheets"
-     
+        extra={
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleBulkExport}
+            loading={exportLoading}
+            disabled={filteredTimesheets.length === 0}
+          >
+            Export All ({filteredTimesheets.length})
+          </Button>
+        }
       />
 
       {/* Filters Component */}

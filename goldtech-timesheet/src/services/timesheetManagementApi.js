@@ -134,5 +134,67 @@ export const timesheetManagementApi = {
       console.error('Error downloading PDF:', error);
       throw error;
     }
+  },
+  
+  // Bulk download timesheets as ZIP
+  bulkDownloadTimesheets: async (timesheetIds, filterDescription) => {
+    const token = getAuthToken();
+    const url = `${API_BASE_URL}/timesheets/management/bulk-download`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          timesheetIds: timesheetIds,
+          filterDescription: filterDescription
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'timesheets.zip';
+
+      if (contentDisposition) {
+        const filenameRegex = /filename[^;=\n]*=["']?([^"';\n]+)["']?/;
+        const match = contentDisposition.match(filenameRegex);
+        
+        if (match && match[1]) {
+          filename = decodeURIComponent(match[1].trim());
+        }
+      }
+
+      // Get the ZIP blob
+      const blob = await response.blob();
+
+      // Create download link
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      return { success: true, message: 'ZIP downloaded successfully', filename };
+
+    } catch (error) {
+      console.error('Error downloading bulk PDFs:', error);
+      throw error;
+    }
   }
+
 }; 

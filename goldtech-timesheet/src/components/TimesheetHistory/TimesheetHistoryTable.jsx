@@ -100,16 +100,27 @@ function TimesheetHistoryTable({
         );
       },
     },
+    // Update the 'Processed By' column to show stand-in information:
     {
       title: 'Processed By',
-      dataIndex: 'approvedBy',
-      key: 'approvedBy',
-      width: 140,
-      render: (approvedBy) => {
-        if (!approvedBy) return <span style={{ color: '#999' }}>Pending</span>;
+      key: 'processedBy',
+      width: 180,
+      render: (_, record) => {
+        if (!record.approvedBy) return <span style={{ color: '#999' }}>Pending</span>;
+        
         return (
           <div style={{ fontSize: '13px' }}>
-            {approvedBy}
+            <div>{record.approvedBy}</div>
+            {record.isStandinApproval && (
+              <Tag 
+                color="purple" 
+                size="small" 
+                icon={<SwapOutlined />}
+                style={{ marginTop: 4 }}
+              >
+                Stand-in: {record.standinApproverName}
+              </Tag>
+            )}
           </div>
         );
       },

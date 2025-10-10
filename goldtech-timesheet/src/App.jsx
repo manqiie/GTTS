@@ -20,6 +20,9 @@ import TimesheetManagementPage from './pages/TimesheetManagementPage';
 import ApproveTimesheetPage from './pages/TimesheetApproval/ApproveTimesheetPage';
 import TimesheetReviewPage from './pages/TimesheetApproval/TimesheetReviewPage';
 import AdminTimesheetEditPage from './pages/AdminTimesheetEditPage';
+import StandinManagementPage from './pages/StandinManagement/StandinManagementPage';
+import CreateStandinPage from './pages/StandinManagement/CreateStandinPage';
+import EditStandinPage from './pages/StandinManagement/EditStandinPage';
 import './App.css';
 
 const { Content } = Layout;
@@ -142,7 +145,23 @@ function AppContent() {
                       <InvoicesPlaceholder />
                     </ProtectedRoute>
                   } />
-                </Routes>
+                  {/* stand in  */}
+                  <Route path="/standin-management" element={
+                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                      <StandinManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/standin-management/create" element={
+                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                      <CreateStandinPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/standin-management/edit/:id" element={
+                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                      <EditStandinPage />
+                    </ProtectedRoute>
+                  } />
+                                  </Routes>
               </Content>
             </Layout>
           </Layout>

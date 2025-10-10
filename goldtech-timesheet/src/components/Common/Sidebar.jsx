@@ -9,11 +9,10 @@ import {
   HistoryOutlined,
   CheckSquareOutlined,
   TeamOutlined,
-  ContactsOutlined,
-  FileTextOutlined,
   LogoutOutlined,
   ExclamationCircleOutlined,
-  UserSwitchOutlined
+  UserSwitchOutlined,
+  SwapOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -80,6 +79,11 @@ function Sidebar({ collapsed, setCollapsed }) {
           key: 'approve',
           icon: <CheckSquareOutlined />,
           label: 'Approve Timesheets',
+        },
+        {
+          key: 'standin-management',
+          icon: <SwapOutlined />,
+          label: 'Stand-in Management',
         }
       );
     }
@@ -119,6 +123,7 @@ function Sidebar({ collapsed, setCollapsed }) {
       'timesheet-management': '/timesheet-management',
       'supervisor-management': '/supervisor-management',
       'employee-management': '/employee-management',
+      'standin-management': '/standin-management',
     };
 
     const route = routeMap[e.key];

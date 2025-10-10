@@ -43,6 +43,27 @@ const EmployeeInfoCard = ({ timesheet }) => {
             </Descriptions.Item>
             <Descriptions.Item label="Manager">{timesheet.managerName || 'N/A'}</Descriptions.Item>
           </Descriptions>
+
+          {timesheet.isStandinApproval && (
+            <>
+              <Descriptions.Item label="Approved By Stand-in">
+                <div>
+                  <Tag color="purple" icon={<SwapOutlined />}>Stand-in Approval</Tag>
+                  <div style={{ marginTop: 4 }}>
+                    <strong>{timesheet.standinApproverName}</strong>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {timesheet.standinApproverEmail}
+                  </div>
+                </div>
+              </Descriptions.Item>
+              {timesheet.standinDelegationReason && (
+                <Descriptions.Item label="Delegation Reason">
+                  {timesheet.standinDelegationReason}
+                </Descriptions.Item>
+              )}
+            </>
+          )}
         </Col>
       </Row>
     </Card>

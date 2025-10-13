@@ -1,7 +1,7 @@
 // src/components/TimesheetHistory/TimesheetHistoryTable.jsx
 import React from 'react';
 import { Table, Tag, Button, Tooltip } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { EyeOutlined, SwapOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 function TimesheetHistoryTable({ 
@@ -17,17 +17,23 @@ function TimesheetHistoryTable({
       sorter: (a, b) => {
         if (a.year !== b.year) return b.year - a.year;
         if (a.month !== b.month) return b.month - a.month;
-        return b.version - a.version; //  Sort by version 
+        return b.version - a.version;
       },
       render: (_, record) => (
         <div>
-          <div>{record.monthName} {record.year}</div>
-          {/* Display version badge */}
-          {record.version > 1 && (
-            <Tag color="blue" size="small" style={{ marginTop: 4 }}>
-              v{record.version}
-            </Tag>
-          )}
+          <div style={{ fontWeight: 500 }}>{record.monthName} {record.year}</div>
+          <div style={{ marginTop: 4 }}>
+            {record.version > 1 && (
+              <Tag color="blue" size="small" style={{ marginRight: 4 }}>
+                v{record.version}
+              </Tag>
+            )}
+            {record.isStandinApproval && (
+              <Tag color="purple" size="small" icon={<SwapOutlined />}>
+                Stand-in
+              </Tag>
+            )}
+          </div>
         </div>
       ),
     },
@@ -42,7 +48,7 @@ function TimesheetHistoryTable({
         { text: 'Rejected', value: 'rejected' },
       ],
       onFilter: (value, record) => record.status === value,
-      render: (status, record) => {
+      render: (status) => {
         const statusConfig = {
           submitted: { color: 'orange', text: 'Pending' },
           approved: { color: 'green', text: 'Approved' },
@@ -51,12 +57,9 @@ function TimesheetHistoryTable({
         
         const config = statusConfig[status] || statusConfig.submitted;
         return (
-          <div>
-            <Tag color={config.color}>
-              {config.text}
-            </Tag>
-          
-          </div>
+          <Tag color={config.color}>
+            {config.text}
+          </Tag>
         );
       },
     },
@@ -100,26 +103,29 @@ function TimesheetHistoryTable({
         );
       },
     },
-    // Update the 'Processed By' column to show stand-in information:
     {
       title: 'Processed By',
       key: 'processedBy',
-      width: 180,
+      width: 200,
       render: (_, record) => {
         if (!record.approvedBy) return <span style={{ color: '#999' }}>Pending</span>;
         
         return (
           <div style={{ fontSize: '13px' }}>
-            <div>{record.approvedBy}</div>
-            {record.isStandinApproval && (
-              <Tag 
-                color="purple" 
-                size="small" 
-                icon={<SwapOutlined />}
-                style={{ marginTop: 4 }}
-              >
-                Stand-in: {record.standinApproverName}
-              </Tag>
+            {record.isStandinApproval ? (
+              <>
+                <div style={{ marginBottom: 4 }}>
+                  <Tag color="purple" size="small" icon={<SwapOutlined />}>
+                    Stand-in
+                  </Tag>
+                </div>
+                <div style={{ fontWeight: 500 }}>{record.standinApproverName}</div>
+                <div style={{ fontSize: '11px', color: '#666' }}>
+                  for {record.approvedBy}
+                </div>
+              </>
+            ) : (
+              <div>{record.approvedBy}</div>
             )}
           </div>
         );
@@ -173,7 +179,7 @@ function TimesheetHistoryTable({
       locale={{ emptyText: null }}
       dataSource={history}
       loading={loading}
-      rowKey={(record) => `${record.timesheetId}-${record.version}`} // Unique key with version
+      rowKey={(record) => `${record.timesheetId}-${record.version}`}
       pagination={{
         showSizeChanger: true,
         showQuickJumper: true,

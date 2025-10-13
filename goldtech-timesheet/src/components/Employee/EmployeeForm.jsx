@@ -1,4 +1,4 @@
-// EmployeeForm.jsx - UPDATED: Only show supervisor role option when editing
+// EmployeeForm.jsx - UPDATED: Default role to employee and hide supervisor for admin
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, Typography, AutoComplete, message } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
@@ -21,14 +21,39 @@ function EmployeeForm({
   const [supervisorSearchValue, setSupervisorSearchValue] = useState('');
   const [loadingSupervisors, setLoadingSupervisors] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState([]);
 
   // Check if this is edit mode (has initialValues)
   const isEditMode = !!initialValues;
+
+  // Check if admin role is selected
+  const isAdminSelected = selectedRoles.some(roleId => {
+    const role = availableRoles.find(r => r.id === roleId);
+    return role && role.name === 'admin';
+  });
 
   useEffect(() => {
     loadRoles();
     loadSupervisors();
   }, []);
+
+  // Set default role to employee when roles are loaded (only for create mode)
+  useEffect(() => {
+    if (!isEditMode && availableRoles.length > 0 && !form.getFieldValue('roles')) {
+      const employeeRole = availableRoles.find(role => role.name === 'employee');
+      if (employeeRole) {
+        form.setFieldValue('roles', [employeeRole.id]);
+        setSelectedRoles([employeeRole.id]);
+      }
+    }
+  }, [availableRoles, isEditMode, form]);
+
+  // Track initial roles in edit mode
+  useEffect(() => {
+    if (isEditMode && initialValues?.roles) {
+      setSelectedRoles(initialValues.roles);
+    }
+  }, [isEditMode, initialValues]);
 
   useEffect(() => {
     filterSupervisorOptions(supervisorSearchValue);
@@ -208,14 +233,35 @@ function EmployeeForm({
     message.info('Supervisor cleared');
   };
 
+  const handleRoleChange = (values) => {
+    setSelectedRoles(values);
+    
+    // If admin is selected, clear supervisor field
+    const hasAdmin = values.some(roleId => {
+      const role = availableRoles.find(r => r.id === roleId);
+      return role && role.name === 'admin';
+    });
+    
+    if (hasAdmin) {
+      setSupervisorSearchValue('');
+      form.setFieldValue('supervisor_id', null);
+    }
+  };
+
   const handleFormFinish = (values) => {
-    if (!values.supervisor_id && supervisorSearchValue && supervisorSearchValue.trim()) {
-      const supervisor = availableSupervisors.find(s => 
-        `${s.full_name} (${s.employee_id || 'No ID'})` === supervisorSearchValue
-      );
-      if (supervisor) {
-        values.supervisor_id = supervisor.id;
+    // Skip supervisor validation if admin role is selected
+    if (!isAdminSelected) {
+      if (!values.supervisor_id && supervisorSearchValue && supervisorSearchValue.trim()) {
+        const supervisor = availableSupervisors.find(s => 
+          `${s.full_name} (${s.employee_id || 'No ID'})` === supervisorSearchValue
+        );
+        if (supervisor) {
+          values.supervisor_id = supervisor.id;
+        }
       }
+    } else {
+      // Clear supervisor_id for admin users
+      values.supervisor_id = null;
     }
     
     onFinish(values);
@@ -238,9 +284,6 @@ function EmployeeForm({
             <Form.Item
               label="Employee ID"
               name="employee_id"
-              rules={[
-                { required: true, message: 'Please input employee ID!' }
-              ]}
             >
               <Input placeholder="GT001" />
             </Form.Item>
@@ -342,6 +385,7 @@ function EmployeeForm({
                 mode="multiple"
                 placeholder="Select user roles"
                 loading={loadingRoles}
+                onChange={handleRoleChange}
                 options={availableRoles.map(role => ({
                   label: `${role.description} (${role.name})`,
                   value: role.id
@@ -387,7 +431,7 @@ function EmployeeForm({
           {/* Join Date - UPDATED: Not compulsory */}
           <Col xs={24} md={12}>
             <Form.Item
-              label="Join Date (Optional)"
+              label="Join Date "
               name="join_date"
             >
               <DatePicker 
@@ -416,41 +460,49 @@ function EmployeeForm({
           )}
         </Row>
 
-        {/* Supervisor Selection - UPDATED: Required */}
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              label="Supervisor"
-              name="supervisor_id"
-              rules={[
-                { required: true, message: 'Please select a supervisor!' }
-              ]}
-            >
-              <AutoComplete
-                value={supervisorSearchValue}
-                options={supervisorOptions}
-                onSelect={handleSupervisorSelect}
-                onSearch={handleSupervisorSearch}
-                onClear={handleSupervisorClear}
-                placeholder="Type supervisor name to search..."
-                allowClear
-                loading={loadingSupervisors}
-                notFoundContent={
-                  loadingSupervisors ? 'Loading...' :
-                  supervisorSearchValue ? 
-                  <span style={{ color: '#ff4d4f' }}>Supervisor doesn't exist</span> : 
-                  <span style={{ color: '#999' }}>Start typing to search supervisors</span>
-                }
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-            
-            {/* Hidden field to store actual supervisor_id */}
-            <Form.Item name="supervisor_id" hidden>
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
+        {/* Supervisor Selection - Hidden when admin role is selected */}
+        {!isAdminSelected && (
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Supervisor"
+                required={true}
+              >
+                <AutoComplete
+                  value={supervisorSearchValue}
+                  options={supervisorOptions}
+                  onSelect={handleSupervisorSelect}
+                  onSearch={handleSupervisorSearch}
+                  onClear={handleSupervisorClear}
+                  placeholder="Type supervisor name to search..."
+                  allowClear
+                  loading={loadingSupervisors}
+                  notFoundContent={
+                    loadingSupervisors ? 'Loading...' :
+                    supervisorSearchValue ? 
+                    <span style={{ color: '#ff4d4f' }}>Supervisor doesn't exist</span> : 
+                    <span style={{ color: '#999' }}>Start typing to search supervisors</span>
+                  }
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+
+              {/* Hidden field to store actual supervisor_id - this is what gets submitted */}
+              <Form.Item 
+                name="supervisor_id" 
+                hidden
+                rules={[
+                  { 
+                    required: !isAdminSelected, 
+                    message: 'Please select a supervisor!' 
+                  }
+                ]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
       </Card>
 
       {/* Submit Button */}

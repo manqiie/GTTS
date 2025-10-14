@@ -1,7 +1,7 @@
-// App.jsx - Fixed Responsive Layout
+// App.jsx - Fixed with Ant Design App Component
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Layout, ConfigProvider } from 'antd';
+import { Layout, ConfigProvider, App as AntApp } from 'antd';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import Sidebar from './components/Common/Sidebar';
@@ -36,11 +36,13 @@ function App() {
         },
       }}
     >
-      <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </AuthProvider>
+      <AntApp>
+        <AuthProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </AuthProvider>
+      </AntApp>
     </ConfigProvider>
   );
 }

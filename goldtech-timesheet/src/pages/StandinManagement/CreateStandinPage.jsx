@@ -44,8 +44,10 @@ function CreateStandinPage() {
   };
 
   const disabledDate = (current) => {
-    // Can't select dates before today
-    return current && current < dayjs().startOf('day');
+    // Allow today and future dates
+    // Compare without time component to allow selection of today
+    const today = dayjs().startOf('day');
+    return current && current.isBefore(today, 'day');
   };
 
   const breadcrumbs = [
@@ -118,6 +120,8 @@ function CreateStandinPage() {
               size="large"
               format="YYYY-MM-DD"
               disabledDate={disabledDate}
+              popupClassName="mobile-friendly-picker"
+              getPopupContainer={(trigger) => trigger.parentElement}
             />
           </Form.Item>
 

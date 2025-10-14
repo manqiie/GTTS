@@ -71,7 +71,10 @@ function EditStandinPage() {
   };
 
   const disabledDate = (current) => {
-    return current && current < dayjs().startOf('day');
+    // Allow today and future dates
+    // Compare without time component to allow selection of today
+    const today = dayjs().startOf('day');
+    return current && current.isBefore(today, 'day');
   };
 
   const breadcrumbs = [
@@ -109,7 +112,7 @@ function EditStandinPage() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          style={{ maxWidth: 600 }}
+          style={{ maxWidth: 600, margin: '0 auto' }}
         >
           <Form.Item
             label="Stand-in Person Name"
@@ -152,6 +155,8 @@ function EditStandinPage() {
               size="large"
               format="YYYY-MM-DD"
               disabledDate={disabledDate}
+              popupClassName="mobile-friendly-picker"
+              getPopupContainer={(trigger) => trigger.parentElement}
             />
           </Form.Item>
 

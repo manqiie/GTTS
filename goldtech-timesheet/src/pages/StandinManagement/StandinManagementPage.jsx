@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Card, Button, Table, Tag, Space, Modal, message, 
-  Tooltip, Badge, Descriptions 
+  Card, Button, Table, Tag, Space, App, Modal, message, 
+  Tooltip, Badge, Descriptions
 } from 'antd';
 import { 
   PlusOutlined, EditOutlined, DeleteOutlined, 
-  EyeOutlined, StopOutlined, CheckCircleOutlined,
+  EyeOutlined, CheckCircleOutlined,
   ClockCircleOutlined, ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ import { standinApi } from '../../services/standinApi';
 
 function StandinManagementPage() {
   const navigate = useNavigate();
+  const { modal } = App.useApp();
+  const [messageApi, contextHolder] = message.useMessage();
   const [standins, setStandins] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedStandin, setSelectedStandin] = useState(null);
@@ -34,7 +36,7 @@ function StandinManagementPage() {
         setStandins(response.data);
       }
     } catch (error) {
-      message.error('Failed to load stand-in delegations');
+      messageApi.error('Failed to load stand-in delegations');
     } finally {
       setLoading(false);
     }
@@ -62,59 +64,59 @@ function StandinManagementPage() {
         setApprovalHistoryVisible(true);
       }
     } catch (error) {
-      message.error('Failed to load approval history');
+      messageApi.error('Failed to load approval history');
     }
   };
 
-  const handleCancel = (record) => {
-    Modal.confirm({
-      title: 'Cancel Stand-in Delegation',
-      icon: <ExclamationCircleOutlined />,
-      content: `Are you sure you want to cancel the stand-in delegation for ${record.standinName}?`,
-      okText: 'Yes, Cancel',
-      okType: 'danger',
-      cancelText: 'No',
-      onOk: async () => {
-        try {
-          const response = await standinApi.cancelStandin(record.id);
-          if (response.success) {
-            message.success('Stand-in delegation cancelled successfully');
-            loadStandins();
-          }
-        } catch (error) {
-          message.error('Failed to cancel stand-in delegation');
-        }
-      }
-    });
-  };
-
   const handleDelete = (record) => {
-    Modal.confirm({
+    console.log('Delete clicked for record:', record);
+    console.log('Approvals count:', record.approvalsCount);
+    
+    // If has approvals, show informational modal only
+    if (record.approvalsCount > 0) {
+      modal.warning({
+        title: 'Cannot Delete Stand-in Delegation',
+        icon: <ExclamationCircleOutlined />,
+        content: (
+          <div>
+            <p>This stand-in delegation cannot be deleted because it has been used for {record.approvalsCount} approval(s).</p>
+            <p style={{ marginTop: 12, color: '#666' }}>
+              Stand-in records with approval history must be kept for audit purposes.
+            </p>
+          </div>
+        ),
+        okText: 'I Understand',
+      });
+      return;
+    }
+
+    // If no approvals, show confirmation to delete
+    modal.confirm({
       title: 'Delete Stand-in Delegation',
       icon: <ExclamationCircleOutlined />,
       content: (
         <div>
           <p>Are you sure you want to delete this stand-in delegation?</p>
-          {record.approvalsCount > 0 && (
-            <p style={{ color: 'red' }}>
-              Warning: This stand-in has been used for {record.approvalsCount} approval(s). 
-              Deletion may not be allowed.
-            </p>
-          )}
+          <p style={{ color: '#666', fontSize: '12px', marginTop: 8 }}>
+            Stand-in: {record.standinName} ({dayjs(record.startDate).format('MMM DD')} - {dayjs(record.endDate).format('MMM DD, YYYY')})
+          </p>
         </div>
       ),
       okText: 'Yes, Delete',
       okType: 'danger',
-      cancelText: 'No',
+      cancelText: 'Cancel',
       onOk: async () => {
+        console.log('Deleting stand-in with ID:', record.id);
         try {
           const response = await standinApi.deleteStandin(record.id);
+          console.log('Delete response:', response);
           if (response.success) {
-            message.success('Stand-in delegation deleted successfully');
+            messageApi.success('Stand-in delegation deleted successfully');
             loadStandins();
           }
         } catch (error) {
-          message.error(error.message || 'Failed to delete stand-in delegation');
+          console.error('Delete error:', error);
+          messageApi.error(error.message || 'Failed to delete stand-in delegation');
         }
       }
     });
@@ -171,7 +173,7 @@ function StandinManagementPage() {
       title: 'Approvals Made',
       dataIndex: 'approvalsCount',
       key: 'approvalsCount',
-      width: 120,
+      width: 140,
       render: (count) => (
         <Badge 
           count={count} 
@@ -194,7 +196,7 @@ function StandinManagementPage() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 200,
+      width: 180,
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="View Details">
@@ -227,24 +229,18 @@ function StandinManagementPage() {
             </Tooltip>
           )}
           
-          {record.isActive && !record.isExpired && (
-            <Tooltip title="Cancel">
-              <Button 
-                size="small" 
-                danger
-                icon={<StopOutlined />}
-                onClick={() => handleCancel(record)}
-              />
-            </Tooltip>
-          )}
-          
-          <Tooltip title={record.approvalsCount > 0 ? "Cannot delete (has approvals)" : "Delete"}>
+          <Tooltip 
+            title={
+              record.approvalsCount > 0 
+                ? "Cannot delete (has approval history)" 
+                : "Delete"
+            }
+          >
             <Button 
               size="small" 
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleDelete(record)}
-              disabled={record.approvalsCount > 0}
             />
           </Tooltip>
         </Space>
@@ -259,6 +255,7 @@ function StandinManagementPage() {
 
   return (
     <div>
+      {contextHolder}  
       <PageHeader
         title="Stand-in Management"
         breadcrumbs={breadcrumbs}

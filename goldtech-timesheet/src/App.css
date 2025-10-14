@@ -333,3 +333,148 @@
     max-width: 300px !important;
   }
 }
+
+/* Mobile-Friendly DatePicker Styles */
+/* Add this to your App.css or create a separate DatePicker.css file */
+
+/* Make date picker dropdown responsive on mobile */
+@media (max-width: 768px) {
+  /* Adjust picker dropdown positioning and size */
+  .mobile-friendly-picker.ant-picker-dropdown {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+
+  /* Scale down the calendar panels */
+  .mobile-friendly-picker .ant-picker-panel-container {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Make range picker panels stack vertically on small screens */
+  .mobile-friendly-picker .ant-picker-panels {
+    flex-direction: column !important;
+  }
+
+  /* Adjust panel width for mobile */
+  .mobile-friendly-picker .ant-picker-panel {
+    width: 100% !important;
+    min-width: 280px;
+  }
+
+  /* Reduce date cell size for mobile */
+  .mobile-friendly-picker .ant-picker-cell {
+    padding: 3px 0;
+  }
+
+  .mobile-friendly-picker .ant-picker-cell-inner {
+    min-width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 12px;
+  }
+
+  /* Adjust header controls */
+  .mobile-friendly-picker .ant-picker-header {
+    padding: 4px 8px;
+  }
+
+  .mobile-friendly-picker .ant-picker-header-view button {
+    font-size: 13px;
+    padding: 0 4px;
+  }
+
+  /* Make footer buttons more touch-friendly */
+  .mobile-friendly-picker .ant-picker-footer {
+    padding: 8px 12px;
+  }
+
+  .mobile-friendly-picker .ant-picker-footer .ant-btn {
+    height: 36px;
+    font-size: 14px;
+  }
+
+  /* Adjust range selection display */
+  .mobile-friendly-picker .ant-picker-range-arrow {
+    display: none;
+  }
+}
+
+/* Extra small phones (< 400px) */
+@media (max-width: 400px) {
+  .mobile-friendly-picker .ant-picker-panel {
+    min-width: 260px;
+  }
+
+  .mobile-friendly-picker .ant-picker-cell-inner {
+    min-width: 24px;
+    height: 24px;
+    line-height: 24px;
+    font-size: 11px;
+  }
+
+  /* Make input smaller on very small screens */
+  .ant-picker-large.ant-picker {
+    font-size: 14px;
+  }
+
+  .ant-picker-large .ant-picker-input > input {
+    font-size: 14px;
+  }
+}
+
+/* Tablet landscape and desktop - ensure calendar looks good */
+@media (min-width: 769px) {
+  .mobile-friendly-picker .ant-picker-panels {
+    flex-direction: row !important;
+  }
+
+  .mobile-friendly-picker .ant-picker-panel {
+    width: auto !important;
+  }
+}
+
+/* Additional improvements for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  .mobile-friendly-picker .ant-picker-cell {
+    padding: 5px 0;
+  }
+
+  .mobile-friendly-picker .ant-picker-cell-inner {
+    min-width: 32px;
+    height: 32px;
+    line-height: 32px;
+  }
+
+  /* Larger header buttons */
+  .mobile-friendly-picker .ant-picker-header-super-prev-btn,
+  .mobile-friendly-picker .ant-picker-header-super-next-btn,
+  .mobile-friendly-picker .ant-picker-header-prev-btn,
+  .mobile-friendly-picker .ant-picker-header-next-btn {
+    min-width: 32px;
+    height: 32px;
+  }
+}
+
+/* Ensure the form card is responsive too */
+@media (max-width: 768px) {
+  .ant-card .ant-form {
+    max-width: 100% !important;
+  }
+
+  .ant-card-body {
+    padding: 16px !important;
+  }
+
+  /* Make form items more compact on mobile */
+  .ant-form-vertical .ant-form-item-label {
+    padding-bottom: 4px;
+  }
+
+  .ant-form-item {
+    margin-bottom: 16px;
+  }
+}

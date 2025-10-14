@@ -5,27 +5,26 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-/**
- * TimesheetCalendar Component
- * 
- * Interactive calendar with features:
- * - Single day clicking
- * - Multi-day selection for bulk operations
- * - Select All / Deselect All functionality
- * - Visual indicators for different entry types including half-day entries
- * - Weekend/working day distinction
- * - Entry status display
- */
 function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState([]);
-  const [dragStart, setDragStart] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Reset selection when month/year changes
   useEffect(() => {
     setSelectionMode(false);
     setSelectedDays([]);
-    setDragStart(null);
   }, [year, month]);
 
   /**
@@ -134,78 +133,78 @@ function TimesheetCalendar({ year, month, entries, onDayClick, onBulkSelection }
     setSelectionMode(false);
   };
 
+  const getEntryDisplay = (entry) => {
+    if (!entry) return null;
 
-/**
- * Get entry display info with support for overnight shifts
- */
-const getEntryDisplay = (entry) => {
-  if (!entry) return null;
+    const getLeaveTypeDisplay = (type, halfDayPeriod = null) => {
+      const baseTypes = {
+        'annual_leave': { text: 'AL', color: 'orange' },
+        'annual_leave_halfday': { text: halfDayPeriod ? `AL-${halfDayPeriod}` : 'AL-HD', color: 'orange' },
+        'medical_leave': { text: 'ML', color: 'red' },
+        'childcare_leave': { text: 'CL', color: 'purple' },
+        'childcare_leave_halfday': { text: halfDayPeriod ? `CL-${halfDayPeriod}` : 'CL-HD', color: 'purple' },
+        'shared_parental_leave': { text: 'SPL', color: 'cyan' },
+        'nopay_leave': { text: 'NPL', color: 'gray' },
+        'nopay_leave_halfday': { text: halfDayPeriod ? `NPL-${halfDayPeriod}` : 'NPL-HD', color: 'gray' },
+        'hospitalization_leave': { text: 'HL', color: 'red' },
+        'reservist': { text: 'RSV', color: 'green' },
+        'paternity_leave': { text: 'PL', color: 'blue' },
+        'compassionate_leave': { text: 'CPL', color: 'magenta' },
+        'maternity_leave': { text: 'ML', color: 'pink' },
+        'off_in_lieu': { text: 'OIL', color: 'purple' },
+        'day_off': { text: 'PH', color: 'gold' }
+      };
 
-  const getLeaveTypeDisplay = (type, halfDayPeriod = null) => {
-    const baseTypes = {
-      'annual_leave': { text: 'AL', color: 'orange' },
-      'annual_leave_halfday': { text: halfDayPeriod ? `AL-${halfDayPeriod}` : 'AL-HD', color: 'orange' },
-      'medical_leave': { text: 'ML', color: 'red' },
-      'childcare_leave': { text: 'CL', color: 'purple' },
-      'childcare_leave_halfday': { text: halfDayPeriod ? `CL-${halfDayPeriod}` : 'CL-HD', color: 'purple' },
-      'shared_parental_leave': { text: 'SPL', color: 'cyan' },
-      'nopay_leave': { text: 'NPL', color: 'gray' },
-      'nopay_leave_halfday': { text: halfDayPeriod ? `NPL-${halfDayPeriod}` : 'NPL-HD', color: 'gray' },
-      'hospitalization_leave': { text: 'HL', color: 'red' },
-      'reservist': { text: 'RSV', color: 'green' },
-      'paternity_leave': { text: 'PL', color: 'blue' },
-      'compassionate_leave': { text: 'CPL', color: 'magenta' },
-      'maternity_leave': { text: 'ML', color: 'pink' },
-      'off_in_lieu': { text: 'OIL', color: 'purple' },
-      'day_off': { text: 'PH', color: 'gold' }
+      return baseTypes[type] || { text: 'N/A', color: 'default' };
     };
 
-    return baseTypes[type] || { text: 'N/A', color: 'default' };
+    switch (entry.type) {
+      case 'working_hours':
+        if (entry.startTime && entry.endTime) {
+          // Format to 12-hour format with AM/PM
+          const start = dayjs(entry.startTime, 'HH:mm').format(isMobile ? 'h:mmA' : 'h:mmA');
+          const end = dayjs(entry.endTime, 'HH:mm').format(isMobile ? 'h:mmA' : 'h:mmA');
+          
+           // Check if it's an overnight shift (end time is before or equal to start time)
+          const startTime = dayjs(entry.startTime, 'HH:mm');
+          const endTime = dayjs(entry.endTime, 'HH:mm');
+          const isOvernight = endTime.isBefore(startTime) || endTime.isSame(startTime);
+          
+          // For mobile, show shorter format
+          const timeDisplay = isMobile 
+            ? `${start.replace(':00', '')}-${end.replace(':00', '')}${isOvernight ? '+' : ''}`
+            : `${start}-${end}${isOvernight ? '+' : ''}`;
+          
+          return { 
+            text: timeDisplay, 
+            color: 'blue',
+            title: isOvernight ? 'Overnight shift (extends to next day)' : 'Regular shift'
+          };
+        }
+        return { text: 'Working', color: 'blue' };
+      
+      default:
+        return getLeaveTypeDisplay(entry.type, entry.halfDayPeriod);
+    }
   };
 
-  switch (entry.type) {
-    case 'working_hours':
-      if (entry.startTime && entry.endTime) {
-        // Format to 12-hour format with AM/PM
-        const start = dayjs(entry.startTime, 'HH:mm').format('h:mmA');
-        const end = dayjs(entry.endTime, 'HH:mm').format('h:mmA');
-        
-        // Check if it's an overnight shift (end time is before or equal to start time)
-        const startTime = dayjs(entry.startTime, 'HH:mm');
-        const endTime = dayjs(entry.endTime, 'HH:mm');
-        const isOvernight = endTime.isBefore(startTime) || endTime.isSame(startTime);
-        
-        // Add "+" indicator for overnight shifts
-        const timeDisplay = `${start}-${end}${isOvernight ? '+' : ''}`;
-        
-        return { 
-          text: timeDisplay, 
-          color: 'blue',
-          title: isOvernight ? 'Overnight shift (extends to next day)' : 'Regular shift'
-        };
-      }
-      return { text: 'Working', color: 'blue' };
-    
-    // Handle all leave types including half-day variants
-    default:
-      return getLeaveTypeDisplay(entry.type, entry.halfDayPeriod);
-  }
-};
-
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDays = isMobile 
+    ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'] 
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
     <div>
       {/* Calendar Controls */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-        <Col>
-          <Space>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16, flexWrap: 'wrap', gap: '8px' }}>
+        <Col xs={24} sm="auto">
+          <Space wrap size={isMobile ? 4 : 8}>
             <Button
               type={selectionMode ? 'primary' : 'default'}
               icon={<SelectOutlined />}
               onClick={toggleSelectionMode}
+              size={isMobile ? 'small' : 'middle'}
             >
-              {selectionMode ? 'Exit Selection' : 'Bulk Select'}
+              {selectionMode ? 'Exit' : 'Bulk Select'}
             </Button>
             
             {/* Select All button - only show when in selection mode */}
@@ -213,14 +212,19 @@ const getEntryDisplay = (entry) => {
               <Button
                 type="default"
                 onClick={handleSelectAll}
+                size={isMobile ? 'small' : 'middle'}
               >
-                {allWorkingDaysSelected ? 'Deselect All Working Days' : 'Select All Working Days'}
+                {allWorkingDaysSelected ? 'Deselect All' : 'Select All'}
               </Button>
             )}
             
             {selectedDays.length > 0 && (
-              <Button type="primary" onClick={applyBulkSelection}>
-                Edit Selected ({selectedDays.length})
+              <Button 
+                type="primary" 
+                onClick={applyBulkSelection}
+                size={isMobile ? 'small' : 'middle'}
+              >
+                Edit ({selectedDays.length})
               </Button>
             )}
           </Space>
@@ -233,23 +237,27 @@ const getEntryDisplay = (entry) => {
         borderRadius: '6px',
         overflow: 'hidden'
       }}>
-        {/* Week Header - using CSS Grid to match calendar days */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          backgroundColor: '#fafafa'
-        }}>
+        {/* Week Header */}
+        <div 
+          className="calendar-week-header"
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            backgroundColor: '#fafafa'
+          }}
+        >
           {weekDays.map(day => (
             <div 
               key={day} 
               style={{ 
                 textAlign: 'center', 
-                padding: '12px 0',
+                padding: isMobile ? '8px 2px' : '12px 0',
                 border: '1px solid #f0f0f0',
-                borderTop: 'none'
+                borderTop: 'none',
+                fontSize: isMobile ? '11px' : '14px'
               }}
             >
-              <Text strong style={{ fontSize: '14px' }}>{day}</Text>
+              <Text strong>{day}</Text>
             </div>
           ))}
         </div>
@@ -277,10 +285,10 @@ const getEntryDisplay = (entry) => {
               <div
                 key={dayData.dateStr}
                 onClick={() => handleDayClick(dayData)}
-                className={`calendar-day ${dayData.isCurrentMonth ? 'current-month' : ''} ${dayData.isSelected ? 'selected' : ''}`}
+                className="calendar-day"
                 style={{
-                  minHeight: '80px',
-                  padding: '8px',
+                  minHeight: isMobile ? '50px' : '80px',
+                  padding: isMobile ? '4px' : '8px',
                   border: '1px solid #f0f0f0',
                   borderTop: 'none',
                   backgroundColor: baseBackgroundColor,
@@ -295,9 +303,9 @@ const getEntryDisplay = (entry) => {
                 onMouseEnter={(e) => {
                   if (dayData.isCurrentMonth && !dayData.isSelected) {
                     if (dayData.isWeekend) {
-                      e.currentTarget.style.backgroundColor = '#e8e8e8'; // Darker hover for weekends
+                      e.currentTarget.style.backgroundColor = '#e8e8e8';
                     } else {
-                      e.currentTarget.style.backgroundColor = '#f8f9fa'; // Light hover for working days
+                      e.currentTarget.style.backgroundColor = '#f8f9fa';
                     }
                   }
                 }}
@@ -309,24 +317,30 @@ const getEntryDisplay = (entry) => {
               >
                 {/* Day Number */}
                 <div style={{ 
-                  fontSize: '14px', 
+                  fontSize: isMobile ? '11px' : '14px', 
                   fontWeight: dayData.isToday ? 'bold' : 'normal',
-                  marginBottom: '4px',
+                  marginBottom: isMobile ? '2px' : '4px',
                   color: dayData.isCurrentMonth ? '#262626' : '#999'
                 }}>
                   {dayData.dayNumber}
                 </div>
 
-                {/* Entry Display */}
+                {/* Entry Display - Responsive Tag */}
                 {entryDisplay && (
                   <Tag 
                     color={entryDisplay.color} 
                     title={entryDisplay.title || entryDisplay.text}
                     style={{ 
-                      fontSize: '11px', 
+                      fontSize: isMobile ? '8px' : '11px',
                       margin: 0,
-                      padding: '2px 6px',
-                      cursor: 'help' // Show help cursor for overnight shifts
+                      padding: isMobile ? '0px 3px' : '2px 6px',
+                      cursor: 'help',
+                      lineHeight: isMobile ? '14px' : 'normal',
+                      display: 'inline-block',
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {entryDisplay.text}
@@ -337,10 +351,10 @@ const getEntryDisplay = (entry) => {
                 {selectionMode && dayData.isCurrentMonth && (
                   <div style={{
                     position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    width: '12px',
-                    height: '12px',
+                    top: isMobile ? '2px' : '4px',
+                    right: isMobile ? '2px' : '4px',
+                    width: isMobile ? '10px' : '12px',
+                    height: isMobile ? '10px' : '12px',
                     borderRadius: '50%',
                     backgroundColor: dayData.isSelected ? '#4f63d2' : '#d9d9d9',
                     border: '1px solid #fff'
@@ -351,7 +365,6 @@ const getEntryDisplay = (entry) => {
           })}
         </div>
       </div>
-
     </div>
   );
 }

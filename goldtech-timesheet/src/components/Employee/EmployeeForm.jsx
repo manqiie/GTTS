@@ -181,7 +181,7 @@ function EmployeeForm({
       ]);
     } else {
       setSupervisorOptions(filtered.map(supervisor => ({
-        value: `${supervisor.full_name} (${supervisor.employee_id || 'No ID'})`,
+        value: `${supervisor.full_name} `,
         label: (
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />

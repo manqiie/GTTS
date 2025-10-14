@@ -88,6 +88,20 @@ function TimesheetPage() {
     }
   };
 
+  // Add this state near other useState declarations
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Add this useEffect near other useEffects
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const viewingMode = getViewingMode();
 
   // Update URL when year/month changes
@@ -344,65 +358,71 @@ function TimesheetPage() {
       {getStatusAlert()}
 
       {/* Main Calendar Card */}
+
       <Card>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
-          <Col>
-            <Title level={4} style={{ margin: 0 }}>
-              {dayjs().year(selectedYear).month(selectedMonth - 1).format('MMMM YYYY')} Timesheet
-            </Title>
-            <div style={{ fontSize: '14px', color: '#666', marginTop: 4 }}>
-              <span>Status: </span>
-              <span style={{ 
-                color: timesheetStatus === 'approved' ? '#52c41a' : 
-                      timesheetStatus === 'submitted' ? '#1890ff' : 
-                      timesheetStatus === 'rejected' ? '#ff4d4f' : '#faad14',
-                fontWeight: 500 
-              }}>
-                {timesheetStatus === 'submitted' ? 'Pending Approval' : 
-                 timesheetStatus.charAt(0).toUpperCase() + timesheetStatus.slice(1)}
-              </span>
-              {viewingMode === 'historical' && (
-                <span style={{ marginLeft: 8, color: '#999' }}>• Historical View</span>
-              )}
-              {viewingMode === 'editable' && !canEdit && (
-                <span style={{ marginLeft: 8, color: '#999' }}>• Read Only</span>
-              )}
-              {hasUnsavedChanges && (
-                <span style={{ marginLeft: 8, color: '#faad14' }}>• Unsaved Changes</span>
-              )}
-            </div>
-          </Col>
-          <Col>
-            <Space>            
-              {/* Save Draft Button - Only show for editable timesheets */}
-              {viewingMode === 'editable' && canEdit && (
-                <Button 
-                  icon={<SaveOutlined />} 
-                  onClick={handleSaveDraft}
-                  loading={loading}
-                  disabled={!hasUnsavedChanges}
-                  type={hasUnsavedChanges ? 'primary' : 'default'}
-                  title={hasUnsavedChanges ? 'Save draft changes to database' : 'No unsaved changes'}
-                >
-                  Save Draft
-                </Button>
-              )}
-              
-              {/* Submit Button */}
-              {viewingMode === 'editable' && showSubmitButton && (
-                <Button 
-                  type="primary" 
-                  icon={<SendOutlined />} 
-                  onClick={handleSubmitForApproval}
-                  loading={loading}
-                  title="Submit timesheet for supervisor approval"
-                >
-                  {submitButtonText}
-                </Button>
-              )}
-            </Space>
-          </Col>
-        </Row>
+        {/* Title Section */}
+        <div style={{ marginBottom: 16 }}>
+          <Title level={4} style={{ margin: 0, fontSize: isMobile ? '16px' : '20px' }}>
+            {dayjs().year(selectedYear).month(selectedMonth - 1).format('MMMM YYYY')} Timesheet
+          </Title>
+          <div style={{ fontSize: isMobile ? '12px' : '14px', color: '#666', marginTop: 4 }}>
+            <span>Status: </span>
+            <span style={{ 
+              color: timesheetStatus === 'approved' ? '#52c41a' : 
+                    timesheetStatus === 'submitted' ? '#1890ff' : 
+                    timesheetStatus === 'rejected' ? '#ff4d4f' : '#faad14',
+              fontWeight: 500 
+            }}>
+              {timesheetStatus === 'submitted' ? 'Pending Approval' : 
+              timesheetStatus.charAt(0).toUpperCase() + timesheetStatus.slice(1)}
+            </span>
+            {viewingMode === 'historical' && (
+              <span style={{ marginLeft: 8, color: '#999', fontSize: isMobile ? '11px' : '12px' }}>• Historical View</span>
+            )}
+            {viewingMode === 'editable' && !canEdit && (
+              <span style={{ marginLeft: 8, color: '#999', fontSize: isMobile ? '11px' : '12px' }}>• Read Only</span>
+            )}
+            {hasUnsavedChanges && (
+              <span style={{ marginLeft: 8, color: '#faad14', fontSize: isMobile ? '11px' : '12px' }}>• Unsaved</span>
+            )}
+          </div>
+        </div>
+        {/* Action Buttons - Desktop: right aligned, Mobile: full width stacked */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          marginBottom: 16,
+          gap: '8px',
+          flexWrap: 'wrap'
+        }}>
+          {viewingMode === 'editable' && canEdit && (
+            <Button 
+              icon={<SaveOutlined />} 
+              onClick={handleSaveDraft}
+              loading={loading}
+              disabled={!hasUnsavedChanges}
+              type={hasUnsavedChanges ? 'primary' : 'default'}
+              size="middle"
+              style={isMobile ? { flex: '1 1 auto' } : {}}
+            >
+              Save Draft
+            </Button>
+          )}
+          
+          {viewingMode === 'editable' && showSubmitButton && (
+            <Button 
+              type="primary" 
+              icon={<SendOutlined />} 
+              onClick={handleSubmitForApproval}
+              loading={loading}
+              size="middle"
+              style={isMobile ? { flex: '1 1 auto' } : {}}
+            >
+              {submitButtonText}
+            </Button>
+          )}
+        </div>
 
         {/* Calendar Component with loading overlay */}
         <div style={{ position: 'relative' }}>

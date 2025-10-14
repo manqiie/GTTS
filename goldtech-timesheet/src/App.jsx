@@ -1,5 +1,5 @@
-// Updated App.jsx - Add supervisor management routes
-import React, { useState } from 'react';
+// App.jsx - Fixed Responsive Layout
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout, ConfigProvider } from 'antd';
 import { AuthProvider } from './contexts/AuthContext';
@@ -47,6 +47,18 @@ function App() {
 
 function AppContent() {
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 992);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   return (
     <Routes>
@@ -62,106 +74,117 @@ function AppContent() {
               setCollapsed={setCollapsed}
             />
             
-            <Layout style={{ marginLeft: collapsed ? 80 : 250, transition: 'margin-left 0.2s' }}>
-              <Content style={{ padding: '20px', backgroundColor: '#f5f5f5' }}>
-                <Routes>
-                  {/* Default redirect to home */}
-                  <Route path="/" element={<Navigate to="/home" replace />} />
-                  
-                  {/* Basic user pages */}
-                  <Route path="/home" element={<HomePage />} />
-                  <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/timesheet" element={<TimesheetPage />} />
-                  <Route path="/history" element={<TimesheetHistoryPage />} />
-                  
-                  {/* Manager/Admin Routes - Timesheet Approval */}
-                  <Route path="/approve" element={
-                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
-                      <ApproveTimesheetPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/approve/review/:timesheetId" element={
-                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
-                      <TimesheetReviewPage />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Admin Routes - Timesheet Management */}
-                  <Route path="/timesheet-management" element={
-                    <ProtectedRoute requiredPermissions={['timesheet.manage']}>
-                      <TimesheetManagementPage />
-                    </ProtectedRoute>
-                  } />
+            {/* Main Layout - NO inline marginLeft style, controlled by CSS */}
+            <Layout className="site-layout">
+              <Content 
+                className="main-content"
+                style={{ 
+                  padding: isMobile ? '12px' : '20px',
+                  backgroundColor: '#f5f5f5',
+                  minHeight: '100vh'
+                }}
+              >
+                <div className="content-wrapper">
+                  <Routes>
+                    {/* Default redirect to home */}
+                    <Route path="/" element={<Navigate to="/home" replace />} />
+                    
+                    {/* Basic user pages */}
+                    <Route path="/home" element={<HomePage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/timesheet" element={<TimesheetPage />} />
+                    <Route path="/history" element={<TimesheetHistoryPage />} />
+                    
+                    {/* Manager/Admin Routes - Timesheet Approval */}
+                    <Route path="/approve" element={
+                      <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                        <ApproveTimesheetPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/approve/review/:timesheetId" element={
+                      <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                        <TimesheetReviewPage />
+                      </ProtectedRoute>
+                    } />
+                    
+                    {/* Admin Routes - Timesheet Management */}
+                    <Route path="/timesheet-management" element={
+                      <ProtectedRoute requiredPermissions={['timesheet.manage']}>
+                        <TimesheetManagementPage />
+                      </ProtectedRoute>
+                    } />
 
-                  {/* Admin Route - Edit Employee Timesheet */}
-                  <Route path="/timesheet-management/edit/:userId" element={
-                    <ProtectedRoute requiredPermissions={['timesheet.manage']}>
-                      <AdminTimesheetEditPage />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Admin Routes - Supervisor Management */}
-                  <Route path="/supervisor-management" element={
-                    <ProtectedRoute requiredPermissions={['employee.manage']}>
-                      <SupervisorManagementPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/supervisor-management/create" element={
-                    <ProtectedRoute requiredPermissions={['employee.create']}>
-                      <CreateSupervisorPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/supervisor-management/edit/:id" element={
-                    <ProtectedRoute requiredPermissions={['employee.edit']}>
-                      <EditSupervisorPage />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Admin Routes - Employee Management */}
-                  <Route path="/employee-management" element={
-                    <ProtectedRoute requiredPermissions={['employee.manage']}>
-                      <EmployeeManagementPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/employee-management/create" element={
-                    <ProtectedRoute requiredPermissions={['employee.create']}>
-                      <CreateEmployeePage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/employee-management/edit/:id" element={
-                    <ProtectedRoute requiredPermissions={['employee.edit']}>
-                      <EditEmployeePage />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Admin Routes - System Administration */}
-                  <Route path="/clients" element={
-                    <ProtectedRoute requiredPermissions={['system.admin']}>
-                      <ClientsPlaceholder />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/invoices" element={
-                    <ProtectedRoute requiredPermissions={['system.admin']}>
-                      <InvoicesPlaceholder />
-                    </ProtectedRoute>
-                  } />
-                  {/* stand in  */}
-                  <Route path="/standin-management" element={
-                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
-                      <StandinManagementPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/standin-management/create" element={
-                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
-                      <CreateStandinPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/standin-management/edit/:id" element={
-                    <ProtectedRoute requiredPermissions={['timesheet.approve']}>
-                      <EditStandinPage />
-                    </ProtectedRoute>
-                  } />
-                                  </Routes>
+                    {/* Admin Route - Edit Employee Timesheet */}
+                    <Route path="/timesheet-management/edit/:userId" element={
+                      <ProtectedRoute requiredPermissions={['timesheet.manage']}>
+                        <AdminTimesheetEditPage />
+                      </ProtectedRoute>
+                    } />
+                    
+                    {/* Admin Routes - Supervisor Management */}
+                    <Route path="/supervisor-management" element={
+                      <ProtectedRoute requiredPermissions={['employee.manage']}>
+                        <SupervisorManagementPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/supervisor-management/create" element={
+                      <ProtectedRoute requiredPermissions={['employee.create']}>
+                        <CreateSupervisorPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/supervisor-management/edit/:id" element={
+                      <ProtectedRoute requiredPermissions={['employee.edit']}>
+                        <EditSupervisorPage />
+                      </ProtectedRoute>
+                    } />
+                    
+                    {/* Admin Routes - Employee Management */}
+                    <Route path="/employee-management" element={
+                      <ProtectedRoute requiredPermissions={['employee.manage']}>
+                        <EmployeeManagementPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/employee-management/create" element={
+                      <ProtectedRoute requiredPermissions={['employee.create']}>
+                        <CreateEmployeePage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/employee-management/edit/:id" element={
+                      <ProtectedRoute requiredPermissions={['employee.edit']}>
+                        <EditEmployeePage />
+                      </ProtectedRoute>
+                    } />
+                    
+                    {/* Admin Routes - System Administration */}
+                    <Route path="/clients" element={
+                      <ProtectedRoute requiredPermissions={['system.admin']}>
+                        <ClientsPlaceholder />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/invoices" element={
+                      <ProtectedRoute requiredPermissions={['system.admin']}>
+                        <InvoicesPlaceholder />
+                      </ProtectedRoute>
+                    } />
+                    
+                    {/* Stand-in Management */}
+                    <Route path="/standin-management" element={
+                      <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                        <StandinManagementPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/standin-management/create" element={
+                      <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                        <CreateStandinPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/standin-management/edit/:id" element={
+                      <ProtectedRoute requiredPermissions={['timesheet.approve']}>
+                        <EditStandinPage />
+                      </ProtectedRoute>
+                    } />
+                  </Routes>
+                </div>
               </Content>
             </Layout>
           </Layout>

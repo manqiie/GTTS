@@ -168,16 +168,7 @@ function Sidebar({ collapsed, setCollapsed }) {
     return user.full_name ? user.full_name.split(' ')[0] : user.name?.split(' ')[0] || 'User';
   };
 
-  const getUserRole = () => {
-    if (!user || !user.roles) return '';
-    
-    // Show primary role (admin > supervisor > employee)
-    if (user.roles.some(role => role.name === 'admin')) return 'Administrator';
-    if (user.roles.some(role => role.name === 'supervisor')) return 'Supervisor';
-    if (user.roles.some(role => role.name === 'employee')) return 'Employee';
-    
-    return user.roles[0]?.description || '';
-  };
+
 
   // Sidebar content component (reusable for both desktop and mobile)
   const SidebarContent = ({ isMobile = false }) => (
@@ -235,15 +226,6 @@ function Sidebar({ collapsed, setCollapsed }) {
                   whiteSpace: 'nowrap'
                 }}>
                   {getUserDisplayName()}
-                </div>
-                <div style={{ 
-                  color: '#b39f65', 
-                  fontSize: '11px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {getUserRole()}
                 </div>
               </div>
             </div>

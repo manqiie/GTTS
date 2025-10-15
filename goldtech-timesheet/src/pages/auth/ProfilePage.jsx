@@ -1,5 +1,6 @@
 // src/pages/ProfilePage.jsx - FIXED supervisor display
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   Descriptions, 
@@ -35,13 +36,12 @@ import apiService from '../../services/apiService';
 const { Title, Text } = Typography;
 
 function ProfilePage() {
-  const { user, updateProfile, refreshUser } = useAuth();
-  const [editModalVisible, setEditModalVisible] = useState(false);
+  const { user } = useAuth();
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [updateLoading, setUpdateLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const navigate = useNavigate();
 
   if (!user) {
     return (
@@ -53,69 +53,6 @@ function ProfilePage() {
       </div>
     );
   }
-
-  const handleEditProfile = () => {
-    form.setFieldsValue({
-      fullName: user.fullName || user.name,
-      email: user.email,
-      phone: user.phone,
-      position: user.position,
-      department: user.department
-    });
-    setEditModalVisible(true);
-  };
-
-  const handleSaveProfile = async (values) => {
-    setUpdateLoading(true);
-    try {
-      // Create update object with only the fields that can be updated
-      const updateData = {
-        fullName: values.fullName,
-        phone: values.phone
-        // Note: position, department, email typically can't be updated by user
-        // These would require admin privileges
-      };
-
-      const result = await updateProfile(updateData);
-      
-      if (result.success) {
-        message.success('Profile updated successfully');
-        setEditModalVisible(false);
-        await refreshUser(); // Refresh user data from server
-      } else {
-        message.error(result.error || 'Failed to update profile');
-      }
-    } catch (error) {
-      console.error('Profile update error:', error);
-      message.error('Failed to update profile');
-    } finally {
-      setUpdateLoading(false);
-    }
-  };
-
-  const handleChangePassword = async (values) => {
-    setPasswordLoading(true);
-    try {
-      // Call password change API
-      const response = await apiService.patch(`/users/${user.id}/reset-password`, {
-        currentPassword: values.currentPassword,
-        newPassword: values.newPassword
-      });
-
-      if (response.success) {
-        message.success('Password changed successfully');
-        setPasswordModalVisible(false);
-        passwordForm.resetFields();
-      } else {
-        message.error(response.message || 'Failed to change password');
-      }
-    } catch (error) {
-      console.error('Password change error:', error);
-      message.error('Failed to change password: ' + error.message);
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
 
   const getRoleDisplay = () => {
     if (!user.roles || user.roles.length === 0) {
@@ -132,27 +69,11 @@ function ProfilePage() {
     });
   };
 
-  const getStatusColor = (status) => {
-    if (typeof status === 'string') {
-      return status.toLowerCase() === 'active' ? 'green' : 'red';
-    }
-    return status === 'ACTIVE' ? 'green' : 'red';
-  };
-
-  const getStatusText = (status) => {
-    if (typeof status === 'string') {
-      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-    }
-    return status === 'ACTIVE' ? 'Active' : 'Inactive';
-  };
-
   // FIXED: Get supervisor name with fallbacks
   const getSupervisorName = () => {
     // Try multiple fields for backward compatibility
     return user.supervisorName || user.supervisor_name || 'Not assigned';
   };
-
-  const roleDisplays = getRoleDisplay();
 
   const breadcrumbs = [
     { title: 'My Profile' }
@@ -165,14 +86,13 @@ function ProfilePage() {
         breadcrumbs={breadcrumbs}
         description="View and manage your personal information"
         extra={
-          <Space>
             <Button 
-             
-              onClick={() => setPasswordModalVisible(true)}
+              type="primary" 
+               onClick={() => navigate('/change-password')}
             >
               Change Password
             </Button>
-          </Space>
+      
         }
       />
 
@@ -182,20 +102,6 @@ function ProfilePage() {
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
             <div style={{ marginRight: 16 }}>
-              <div style={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #4f63d2, #b39f65)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '32px',
-                fontWeight: 'bold'
-              }}>
-                {(user.fullName || user.name || 'U').charAt(0).toUpperCase()}
-              </div>
             </div>
             <div>
               <Title level={3} style={{ margin: 0, marginBottom: 8 }}>
@@ -276,79 +182,6 @@ function ProfilePage() {
         )}
       </Card>
 
-      {/* Change Password Modal */}
-      <Modal
-        title="Change Password"
-        open={passwordModalVisible}
-        onCancel={() => {
-          setPasswordModalVisible(false);
-          passwordForm.resetFields();
-        }}
-        footer={null}
-        width={400}
-      >
-        <Form
-          form={passwordForm}
-          layout="vertical"
-          onFinish={handleChangePassword}
-        >
-          <Form.Item
-            label="Current Password"
-            name="currentPassword"
-            rules={[{ required: true, message: 'Please enter your current password' }]}
-          >
-            <Input.Password prefix={<LockOutlined />} />
-          </Form.Item>
-
-          <Form.Item
-            label="New Password"
-            name="newPassword"
-            rules={[
-              { required: true, message: 'Please enter a new password' },
-              { min: 6, message: 'Password must be at least 6 characters' }
-            ]}
-          >
-            <Input.Password prefix={<LockOutlined />} />
-          </Form.Item>
-
-          <Form.Item
-            label="Confirm New Password"
-            name="confirmPassword"
-            dependencies={['newPassword']}
-            rules={[
-              { required: true, message: 'Please confirm your new password' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('The two passwords do not match!'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password prefix={<LockOutlined />} />
-          </Form.Item>
-
-          <div style={{ textAlign: 'right', marginTop: 24 }}>
-            <Space>
-              <Button onClick={() => {
-                setPasswordModalVisible(false);
-                passwordForm.resetFields();
-              }}>
-                Cancel
-              </Button>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                loading={passwordLoading}
-              >
-                Change Password
-              </Button>
-            </Space>
-          </div>
-        </Form>
-      </Modal>
     </div>
   );
 }

@@ -56,7 +56,7 @@ function EditEmployeePage() {
           department: emp.department,
           location: emp.location,
           company: emp.company,
-          join_date: dayjs(emp.join_date),
+          join_date: emp.join_date ? dayjs(emp.join_date) : null,
           
           // CRITICAL: Set supervisor_id with fallback
           supervisor_id: emp.supervisor_id || emp.manager_id || null,
@@ -101,7 +101,7 @@ function EditEmployeePage() {
         department: values.department,
         location: values.location || null,
         company: values.company || null,
-        join_date: values.join_date.format('YYYY-MM-DD'),
+        join_date: values.join_date ? values.join_date.format('YYYY-MM-DD') : null,
         
         // CRITICAL: Map supervisor_id properly
         supervisor_id: values.supervisor_id || null,

@@ -25,7 +25,7 @@ function CreateEmployeePage() {
         department: values.department,
         location: values.location || null,
         company: values.company || null,
-        join_date: values.join_date.format('YYYY-MM-DD'),
+        join_date: values.join_date ? values.join_date.format('YYYY-MM-DD') : null,
         supervisor_id: values.supervisor_id || null,
         roles: values.roles // Array of role IDs
       };

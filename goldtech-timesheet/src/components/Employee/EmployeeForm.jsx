@@ -406,9 +406,9 @@ function EmployeeForm({
           initialDepartment={initialValues?.department}
           initialLocation={initialValues?.location}
           disabled={disabled}
-          clientRequired={false}
+          clientRequired={true}
           departmentRequired={true}
-          locationRequired={false}
+          locationRequired={true}
         />
 
         <Row gutter={24}>
@@ -423,7 +423,7 @@ function EmployeeForm({
             </Form.Item>
           </Col>
           
-          {/* Join Date - UPDATED: Not compulsory */}
+          {/* Join Date - */}
           <Col xs={24} md={12}>
             <Form.Item
               label="Join Date "

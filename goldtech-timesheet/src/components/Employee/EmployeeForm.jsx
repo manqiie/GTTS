@@ -375,11 +375,6 @@ function EmployeeForm({
               label="User Roles"
               name="roles"
               rules={[{ required: true, message: 'Please select at least one role!' }]}
-              help={
-                isEditMode 
-                  ? "Select user roles. Available roles: Admin, Supervisor, and Employee. Users can have multiple roles."
-                  : "Select Admin or Employee role. Users can have multiple roles. Note: Supervisor role can only be assigned when editing existing users."
-              }
             >
               <Select
                 mode="multiple"

@@ -1,4 +1,4 @@
-// src/components/TimesheetHistory/TimesheetHistoryTable.jsx
+// src/components/TimesheetHistory/TimesheetHistoryTable.jsx - Updated
 import React from 'react';
 import { Table, Tag, Button, Tooltip } from 'antd';
 import { EyeOutlined, SwapOutlined } from '@ant-design/icons';
@@ -28,11 +28,7 @@ function TimesheetHistoryTable({
                 v{record.version}
               </Tag>
             )}
-            {record.isStandinApproval && (
-              <Tag color="purple" size="small" icon={<SwapOutlined />}>
-                Stand-in
-              </Tag>
-            )}
+         
           </div>
         </div>
       ),
@@ -106,9 +102,11 @@ function TimesheetHistoryTable({
     {
       title: 'Processed By',
       key: 'processedBy',
-      width: 200,
+      width: 220,
       render: (_, record) => {
-        if (!record.approvedBy) return <span style={{ color: '#999' }}>Pending</span>;
+        if (!record.approvedBy && !record.originalSupervisor) {
+          return <span style={{ color: '#999' }}>Pending</span>;
+        }
         
         return (
           <div style={{ fontSize: '13px' }}>
@@ -116,16 +114,36 @@ function TimesheetHistoryTable({
               <>
                 <div style={{ marginBottom: 4 }}>
                   <Tag color="purple" size="small" icon={<SwapOutlined />}>
-                    Stand-in
+                    Stand-in Approval
                   </Tag>
                 </div>
-                <div style={{ fontWeight: 500 }}>{record.standinApproverName}</div>
-                <div style={{ fontSize: '11px', color: '#666' }}>
-                  for {record.approvedBy}
+                <div style={{ fontWeight: 500, marginBottom: 2 }}>
+                  {record.standinApproverName || record.approvedBy}
                 </div>
+                {record.standinApproverEmail && (
+                  <div style={{ fontSize: '11px', color: '#666', marginBottom: 2 }}>
+                    {record.standinApproverEmail}
+                  </div>
+                )}
+              
+                {record.standinDelegationReason && (
+                  <Tooltip title={record.standinDelegationReason} placement="topLeft">
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: '#1890ff', 
+                      marginTop: 2,
+                      cursor: 'help',
+                      fontStyle: 'italic'
+                    }}>
+                      (reason provided)
+                    </div>
+                  </Tooltip>
+                )}
               </>
             ) : (
-              <div>{record.approvedBy}</div>
+              <div style={{ fontWeight: 500 }}>
+                {record.approvedBy || record.originalSupervisor}
+              </div>
             )}
           </div>
         );

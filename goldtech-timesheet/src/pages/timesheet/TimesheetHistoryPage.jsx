@@ -51,12 +51,6 @@ function TimesheetHistoryPage() {
     navigate(`/timesheet?year=${record.year}&month=${record.month}`);
   };
 
-  const handleRefresh = () => {
-    console.log('Refreshing history...');
-    loadHistory();
-    message.info('History refreshed');
-  };
-
   // Filter options
   const monthOptions = [
     { label: 'All Months', value: 'all' },
@@ -88,15 +82,6 @@ function TimesheetHistoryPage() {
         title="Timesheet History"
         breadcrumbs={breadcrumbs}
         description="View your previous timesheet submissions and their approval status"
-        extra={
-          <Button 
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={loading}
-          >
-            Refresh
-          </Button>
-        }
       />
 
       <Card style={{ marginBottom: 20 }}>

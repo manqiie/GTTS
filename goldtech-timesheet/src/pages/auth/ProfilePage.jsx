@@ -23,8 +23,7 @@ import {
   BankOutlined,
   TeamOutlined,
   CalendarOutlined,
-  SaveOutlined,
-  KeyOutlined,
+  SaveOutlined,   
   LockOutlined,
   UserOutlined
 } from '@ant-design/icons';
@@ -168,7 +167,7 @@ function ProfilePage() {
         extra={
           <Space>
             <Button 
-              icon={<KeyOutlined />}
+             
               onClick={() => setPasswordModalVisible(true)}
             >
               Change Password
@@ -206,14 +205,6 @@ function ProfilePage() {
                 <Text strong style={{ color: '#666' }}>
                   {user.position}
                 </Text>
-                {roleDisplays.map((roleDisplay, index) => (
-                  <Tag key={index} color={roleDisplay.color}>
-                    {roleDisplay.text}
-                  </Tag>
-                ))}
-                <Tag color={getStatusColor(user.status)}>
-                  {getStatusText(user.status)}
-                </Tag>
               </Space>
             </div>
           </div>
@@ -350,7 +341,6 @@ function ProfilePage() {
               <Button 
                 type="primary" 
                 htmlType="submit" 
-                icon={<KeyOutlined />}
                 loading={passwordLoading}
               >
                 Change Password

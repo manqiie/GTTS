@@ -204,7 +204,7 @@ function Sidebar({ collapsed, setCollapsed }) {
             whiteSpace: 'pre-line'
           }}
         >
-          GOLDTECH{'\n'}RESOURCES
+          GOLDTECH RESOURCES
         </Title>
       </div>
 
@@ -330,11 +330,6 @@ function Sidebar({ collapsed, setCollapsed }) {
 
       {/* Mobile Drawer */}
       <Drawer
-        title={
-          <div style={{ color: '#b39f65', fontWeight: 'bold' }}>
-            GOLDTECH RESOURCES
-          </div>
-        }
         placement="left"
         onClose={() => setMobileDrawerVisible(false)}
         open={mobileDrawerVisible}

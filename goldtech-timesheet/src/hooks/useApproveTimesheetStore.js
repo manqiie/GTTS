@@ -249,7 +249,9 @@ export function useApproveTimesheetStore() {
       leaveBreakdown: stats.leaveBreakdown || {},
       
       // Approval details
-      approvedBy: apiTimesheet.approvedBy,
+      approvedBy: apiTimesheet.isStandinApproval && apiTimesheet.standinApproverName 
+        ? apiTimesheet.standinApproverName 
+        : apiTimesheet.approvedBy,
       approvedAt: apiTimesheet.approvedAt,
       approvalComments: apiTimesheet.approvalComments || ''
     };

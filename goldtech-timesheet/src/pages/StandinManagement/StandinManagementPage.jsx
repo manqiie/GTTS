@@ -85,7 +85,7 @@ function StandinManagementPage() {
             </p>
           </div>
         ),
-        okText: 'I Understand',
+        okText: 'OK',
       });
       return;
     }

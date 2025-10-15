@@ -1,7 +1,7 @@
 // Fixed ApproveTimesheetPage.jsx - Show all statuses with pending first
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Input, Select, Button, message } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SearchOutlined} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/Common/PageHeader';
 import ApproveTimesheetTable from '../../components/ApproveTimesheet/ApproveTimesheetTable';
@@ -71,11 +71,6 @@ function ApproveTimesheetPage() {
     navigate(targetPath);
   };
 
-  const handleRefresh = () => {
-    loadTimesheets();
-    message.info('Timesheets refreshed');
-  };
-
   // Get unique values for filter dropdowns
   const getUniqueValues = (key) => {
     const values = [...new Set(timesheets.map(ts => ts[key]))].sort();
@@ -110,15 +105,6 @@ function ApproveTimesheetPage() {
         title="Approve Timesheets"
         breadcrumbs={breadcrumbs}
         description="Review and approve employee timesheet submissions"
-        extra={
-          <Button 
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={loading}
-          >
-            Refresh
-          </Button>
-        }
       />
 
       <Card style={{ marginBottom: 20 }}>
